@@ -27,11 +27,11 @@ import numpy as np
 
 
 HERE = Path(__file__).resolve().parent
-TOOLKIT_PATH = HERE / "roi_metrics_dicom_3.0.py"
+TOOLKIT_PATH = HERE / "roi_metrics_dicom_3.1.py"
 
 
 def load_toolkit(toolkit_path: Path):
-    spec = importlib.util.spec_from_file_location("roi_metrics_dicom_3.0", toolkit_path)
+    spec = importlib.util.spec_from_file_location("roi_metrics_dicom_3.1", toolkit_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not load toolkit from: {toolkit_path}")
     module = importlib.util.module_from_spec(spec)
