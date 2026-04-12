@@ -1,0 +1,12 @@
+numpy>=1.24
+scipy>=1.10
+scikit-image>=0.20
+Pillow>=9.0
+matplotlib>=3.7
+opencv-python>=4.7
+pydicom>=2.4
+pandas>=2.0
+
+# Optional — needed for DISTS metric
+# torch>=2.0
+# piq>=0.8

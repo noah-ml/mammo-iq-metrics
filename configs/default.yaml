@@ -1,0 +1,54 @@
+# Default pipeline configuration
+# Override via CLI args or environment variables
+
+dataset:
+  vindr_root: "${VINDR_ROOT}"
+  images_subdir: "images"
+  annotations: "finding_annotations.csv"
+
+sampling:
+  n_with_lesion: 40
+  n_without_lesion: 10
+  seed: 2024
+  strategy: "stratified"  # stratified | random | one_per_study
+
+pipeline:
+  patch_size: 96
+  buffer_px: 20
+  save_degraded_qc: false
+
+# All severity levels (1–6) mirror SEVERITY_PRESETS in roi_metrics_dicom_3.1.py.
+# Severity 0 = baseline (no degradation).
+degradations:
+  # Dose-based Gaussian noise.
+  # dose_factor = fraction of original dose; lower → more noise.
+  # additional_std = sqrt(max(target_std² - baseline_std², 0))
+  # where target_std = baseline_std / sqrt(dose_factor).
+  noise:
+    - {severity: 1, dose_factor: 0.95}
+    - {severity: 2, dose_factor: 0.85}
+    - {severity: 3, dose_factor: 0.75}
+    - {severity: 4, dose_factor: 0.65}
+    - {severity: 5, dose_factor: 0.50}
+    - {severity: 6, dose_factor: 0.35}
+
+  # Physically parameterised horizontal motion blur.
+  # length_mm is converted to pixels via PixelSpacing from the DICOM header.
+  # length_px_fallback is pre-computed for 0.07 mm/px (VinDr-Mammo typical spacing).
+  motion_blur:
+    - {severity: 1, length_mm: 0.10, length_px_fallback:  3, angle: 0.0}
+    - {severity: 2, length_mm: 0.25, length_px_fallback:  5, angle: 0.0}
+    - {severity: 3, length_mm: 0.50, length_px_fallback:  7, angle: 0.0}
+    - {severity: 4, length_mm: 0.75, length_px_fallback: 11, angle: 0.0}
+    - {severity: 5, length_mm: 1.00, length_px_fallback: 15, angle: 0.0}
+    - {severity: 6, length_mm: 1.50, length_px_fallback: 21, angle: 0.0}
+
+  # Linear contrast reduction centered on masked tissue median.
+  # x_out = alpha * (x_in - center) + center
+  contrast:
+    - {severity: 1, alpha: 0.95}
+    - {severity: 2, alpha: 0.90}
+    - {severity: 3, alpha: 0.85}
+    - {severity: 4, alpha: 0.80}
+    - {severity: 5, alpha: 0.75}
+    - {severity: 6, alpha: 0.70}

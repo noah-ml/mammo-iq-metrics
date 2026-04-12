@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+results/
+batch_*_results/
+*.dicom
+*.dcm
+.DS_Store
+.env
