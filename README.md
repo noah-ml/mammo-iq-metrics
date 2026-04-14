@@ -134,7 +134,7 @@ pytest tests/ -v
 
 ## Dataset
 
-[VinDr-Mammo](https://vindr.ai/datasets/mammo) — 5,000 full-field digital mammography studies (4 views each) with BI-RADS and finding-level bounding box annotations. Available via PhysioNet.
+[VinDr-Mammo](https://vindr.ai/datasets/mammo): 5,000 full-field digital mammography studies (4 views each) with BI-RADS and finding-level bounding box annotations. Available via PhysioNet.
 
 Expected layout:
 ```
