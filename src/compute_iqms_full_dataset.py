@@ -65,7 +65,7 @@ from typing import Any
 
 import numpy as np
 
-# Suppress pydicom's VR validation warning — the VinDr-Mammo DICOMs contain
+# Suppress pydicom's VR validation warning: the VinDr-Mammo DICOMs contain
 # non-standard UID strings that are harmless for pixel data processing.
 warnings.filterwarnings(
     "ignore",
@@ -76,7 +76,7 @@ warnings.filterwarnings(
 
 
 # =============================================================================
-# Paths — update if your dataset is mounted elsewhere
+# Paths: update if your dataset is mounted elsewhere
 # =============================================================================
 
 VINDR_ROOT = Path(
@@ -90,7 +90,7 @@ TOOLKIT_PATH = HERE / "roi_metrics.py"
 
 
 # =============================================================================
-# Output column schema — every CSV row has exactly these columns in this order
+# Output column schema: every CSV row has exactly these columns in this order
 # =============================================================================
 
 COLUMNS: list[str] = [
@@ -120,7 +120,7 @@ _NAN_METRICS: dict[str, Any] = {k: "" for k in _METRIC_KEYS}
 
 
 # =============================================================================
-# Module-level toolkit reference — populated by _worker_init in subprocesses
+# Module-level toolkit reference: populated by _worker_init in subprocesses
 # or set directly in single-process mode
 # =============================================================================
 
@@ -245,7 +245,7 @@ def discover_dicoms(images_dir: Path) -> list[Path]:
 
 
 # =============================================================================
-# Per-image processing — must be at module level to be picklable
+# Per-image processing: must be at module level to be picklable
 # =============================================================================
 
 def _param_info(spec_dict: dict) -> tuple[str, Any]:
