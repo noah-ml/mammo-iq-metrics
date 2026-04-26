@@ -996,6 +996,91 @@ def apply_contrast_reduction(
     return clip01(out)
 
 
+# --- JPEG 2000 compression ---------------------------------------------------
+
+# Prefer glymur (OpenJPEG) for exact compression-ratio control; fall back to
+# Pillow if glymur is not installed. Pillow gives approximate quality control
+# only — suitable for experimentation but not for precise CR validation.
+try:
+    import glymur as _glymur  # type: ignore
+    _JP2_BACKEND = "glymur" if _glymur.version.openjpeg_version is not None else None
+except (ImportError, AttributeError):
+    _JP2_BACKEND = None
+
+if _JP2_BACKEND is None:
+    try:
+        from PIL import Image as _PIL_Image  # already imported above; this is a no-op
+        _JP2_BACKEND = "pillow"
+    except ImportError:
+        _JP2_BACKEND = None  # jpeg2000 degradation will raise at call time
+
+
+def apply_jpeg2000_degradation(
+    image: ArrayLike,
+    compression_ratio: int,
+    bit_depth: int = 16,
+) -> np.ndarray:
+    """Apply lossy JPEG 2000 compression and decompress back to float32.
+
+    Simulates the information loss introduced by wavelet-based lossy compression
+    at a given compression ratio. The encode→decode round-trip is deterministic:
+    identical inputs produce identical outputs with no random seed needed.
+
+    Uses glymur (OpenJPEG) when available for exact CR control. Falls back to
+    Pillow with approximate quality-layer mapping when glymur is not installed.
+
+    Parameters
+    ----------
+    image : array-like, float32, shape (H, W)
+        Normalised mammogram in [0, 1].
+    compression_ratio : int
+        Target compression ratio (e.g. 10, 25, 50, 100, 250, 500).
+        Higher values = more lossy = more detail loss.
+    bit_depth : int
+        Bit depth for integer quantisation before compression (default: 16).
+        VinDr-Mammo DICOMs are typically 12–16 bit.
+
+    Returns
+    -------
+    degraded : np.ndarray, float32
+        Decompressed image clipped to [0, 1], same shape as input.
+    """
+    if _JP2_BACKEND is None:
+        raise ImportError(
+            "JPEG 2000 degradation requires glymur or Pillow. "
+            "Install glymur for exact CR control: pip install glymur"
+        )
+
+    x = np.asarray(image, dtype=np.float64)
+    max_val = (2 ** bit_depth) - 1
+
+    img_int = np.clip(np.round(x * max_val), 0, max_val)
+    img_int = img_int.astype(np.uint8 if bit_depth <= 8 else np.uint16)
+
+    if _JP2_BACKEND == "glymur":
+        import tempfile, os
+        tmp = tempfile.mktemp(suffix=".jp2")
+        try:
+            _glymur.Jp2k(tmp, data=img_int, cratios=[compression_ratio])
+            decoded = _glymur.Jp2k(tmp)[:]
+        finally:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+    else:
+        import io
+        img_8bit = np.clip(np.round(img_int.astype(np.float64) / max_val * 255), 0, 255).astype(np.uint8)
+        pil_img = Image.fromarray(img_8bit, mode="L")
+        buf = io.BytesIO()
+        pil_img.save(buf, format="JPEG2000", quality_mode="rates",
+                     quality_layers=[compression_ratio], irreversible=True)
+        buf.seek(0)
+        decoded = np.array(Image.open(buf))
+        decoded = np.round(decoded.astype(np.float64) / 255.0 * max_val).astype(img_int.dtype)
+
+    result = decoded.astype(np.float64) / max_val
+    return clip01(result.astype(np.float32))
+
+
 # --- Spatial resolution loss -------------------------------------------------
 
 def apply_resolution_degradation(
@@ -1196,20 +1281,8 @@ def apply_degradation(
         )
 
     if degradation_type == "jpeg2000":
-        import importlib.util as _ilu, sys as _sys
-        _here = Path(__file__).resolve().parent
-        _jp2_path = _here / "jpeg2000_degradation.py"
-        if "jpeg2000_degradation" not in _sys.modules:
-            _spec = _ilu.spec_from_file_location("jpeg2000_degradation", str(_jp2_path))
-            _mod = _ilu.module_from_spec(_spec)
-            _sys.modules["jpeg2000_degradation"] = _mod
-            _spec.loader.exec_module(_mod)
-        _jp2 = _sys.modules["jpeg2000_degradation"]
         cr = SEVERITY_PRESETS["jpeg2000_compression_ratios"][idx]
-        degraded = _jp2.apply_jpeg2000_degradation(
-            np.asarray(image, dtype=np.float64), compression_ratio=cr
-        )
-        return degraded.astype(np.float32)
+        return apply_jpeg2000_degradation(image, compression_ratio=cr)
 
     if degradation_type == "resolution":
         return apply_resolution_degradation(
