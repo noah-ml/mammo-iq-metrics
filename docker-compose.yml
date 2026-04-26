@@ -1,0 +1,22 @@
+services:
+  iqm-pipeline:
+    build: .
+    image: mammo-iqm:latest
+    volumes:
+      # Mount the VinDr-Mammo dataset read-only
+      - ${VINDR_ROOT:-D:/Mammo/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0}:/data/vindr-mammo:ro
+      # Write results to ./results on the host
+      - ./results:/app/results
+    environment:
+      - VINDR_ROOT=/data/vindr-mammo
+
+  # Run only the 50-sample stratified batch
+  batch:
+    build: .
+    image: mammo-iqm:latest
+    command: ["src/run_batch.py", "--output-dir", "/app/results/batch"]
+    volumes:
+      - ${VINDR_ROOT:-D:/Mammo/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0}:/data/vindr-mammo:ro
+      - ./results:/app/results
+    environment:
+      - VINDR_ROOT=/data/vindr-mammo

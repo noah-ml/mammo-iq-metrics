@@ -1,0 +1,29 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.venv
+venv
+
+# Result and output directories
+results/
+iqm_full_dataset/
+batch_results*/
+50_batch_results*/
+jpeg_comp/
+
+# Large data files
+*.dicom
+*.dcm
+*.csv
+*.xlsx
+*.pdf
+*.docx
+*.png
+*.txt
+
+# Dev files
+.vscode
+.idea
+*.md

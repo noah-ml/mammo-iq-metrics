@@ -114,6 +114,38 @@ ROIs are always determined on the **original image** and reused for all degraded
 └── README.md
 ```
 
+## Docker
+
+**Build the image:**
+```bash
+docker compose build
+```
+
+**Run the full-dataset pipeline** (writes results to `./results/`):
+```bash
+# Set VINDR_ROOT to your local dataset path, then:
+docker compose run --rm iqm-pipeline
+# or override workers/output inline:
+docker compose run --rm iqm-pipeline \
+  src/compute_iqms_full_dataset.py --workers 4 --output-dir /app/results
+```
+
+**Run the 50-sample batch only:**
+```bash
+docker compose run --rm batch
+```
+
+**Single image:**
+```bash
+docker compose run --rm iqm-pipeline \
+  src/test_runner.py \
+  --image /data/vindr-mammo/images/<study_id>/<image_id>.dicom \
+  --annotations /data/vindr-mammo/finding_annotations.csv \
+  --output-dir /app/results/single
+```
+
+The dataset directory is mounted read-only at `/data/vindr-mammo` inside the container. Set the `VINDR_ROOT` environment variable on your host to point to your local copy, or edit the `docker-compose.yml` volume path directly.
+
 ## Quickstart
 
 ```bash
