@@ -209,7 +209,7 @@ Each batch run produces:
 
 ## Tech Stack
 
-Python · pydicom · OpenCV · scikit-image · NumPy · SciPy · Pillow · matplotlib · Hydra · Weights & Biases
+Python · pydicom · OpenCV · scikit-image · NumPy · SciPy · Pillow · matplotlib
 
 ## License
 
