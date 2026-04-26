@@ -27,11 +27,11 @@ import numpy as np
 
 
 HERE = Path(__file__).resolve().parent
-TOOLKIT_PATH = HERE / "roi_metrics_dicom_3.1.py"
+TOOLKIT_PATH = HERE / "roi_metrics.py"
 
 
 def load_toolkit(toolkit_path: Path):
-    spec = importlib.util.spec_from_file_location("roi_metrics_dicom_3.1", toolkit_path)
+    spec = importlib.util.spec_from_file_location("roi_metrics", toolkit_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not load toolkit from: {toolkit_path}")
     module = importlib.util.module_from_spec(spec)
@@ -154,14 +154,14 @@ def build_single_degradation_spec(toolkit, degradation: str, severity: int = 1):
     """
     if degradation == "none":
         return [toolkit.DegradationSpec("none", 0, {})]
-    if degradation in ("noise", "motion_blur", "contrast"):
+    if degradation in ("noise", "motion_blur", "contrast", "jpeg2000", "resolution"):
         return [
             toolkit.DegradationSpec("none", 0, {}),
             toolkit.DegradationSpec(degradation, int(severity), {}),
         ]
     raise ValueError(
         f"Unknown degradation '{degradation}'. "
-        "Choose from: none, noise, motion_blur, contrast"
+        "Choose from: none, noise, motion_blur, contrast, jpeg2000, resolution"
     )
 
 
@@ -185,7 +185,7 @@ def parse_args():
     mode.add_argument("--full-plan", action="store_true", help="Run baseline + default 12 degradations (default)")
     mode.add_argument(
         "--degradation",
-        choices=["none", "noise", "motion_blur", "contrast"],
+        choices=["none", "noise", "motion_blur", "contrast", "jpeg2000", "resolution"],
         default=None,
         help="Run only baseline + one custom degradation",
     )

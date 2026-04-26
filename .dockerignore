@@ -21,7 +21,6 @@ jpeg_comp/
 *.pdf
 *.docx
 *.png
-*.txt
 
 # Dev files
 .vscode

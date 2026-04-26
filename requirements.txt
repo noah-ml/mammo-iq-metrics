@@ -6,6 +6,10 @@ matplotlib>=3.7
 opencv-python>=4.7
 pydicom>=2.4
 pandas>=2.0
+pytest>=7.0
+
+# Optional — needed for JPEG 2000 degradation (exact CR control)
+# glymur>=0.12        # falls back to Pillow if not installed
 
 # Optional — needed for DISTS metric
 # torch>=2.0

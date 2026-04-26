@@ -52,8 +52,8 @@ IMAGES_DIR = VINDR_ROOT / "images"
 ANNOTATIONS_CSV = VINDR_ROOT / "finding_annotations.csv"
 
 HERE = Path(__file__).resolve().parent
-TOOLKIT_PATH = HERE / "roi_metrics_dicom_3.1.py"
-RUNNER_PATH = HERE / "test_runner_dicom.py"
+TOOLKIT_PATH = HERE / "roi_metrics.py"
+RUNNER_PATH = HERE / "test_runner.py"
 
 
 # ---------------------------------------------------------------------------
@@ -215,8 +215,8 @@ def main():
     args = parse_args()
 
     # --- Load toolkit and runner helpers ---
-    toolkit = _load_module("roi_metrics_dicom_3.1", TOOLKIT_PATH)
-    runner = _load_module("test_runner_dicom", RUNNER_PATH)
+    toolkit = _load_module("roi_metrics", TOOLKIT_PATH)
+    runner = _load_module("test_runner", RUNNER_PATH)
 
     # --- Discover and sample ---
     print(f"Scanning for DICOMs in: {args.images_dir}")
