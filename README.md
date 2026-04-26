@@ -18,10 +18,10 @@ This pipeline systematically quantifies how defined image quality dimensions aff
 
 ## Degradations
 
-All three degradation types use physically calibrated parameters with 6 severity levels.
+All five degradation types use physically calibrated parameters with 6 severity levels each.
 
 ### Dose-based noise
-Simulates reduced X-ray dose. `dose_factor` is the fraction of original dose; noise is added to match the expected increase in quantum noise.
+Simulates reduced X-ray dose. `dose_factor` is the fraction of original dose; noise is added to match the expected increase in quantum noise variance (∝ 1/dose).
 
 | Severity | `dose_factor` |
 |---|---|
@@ -33,16 +33,16 @@ Simulates reduced X-ray dose. `dose_factor` is the fraction of original dose; no
 | 6 | 0.35 |
 
 ### Motion blur
-Horizontal rectangular PSF simulating detector/patient motion. Length is specified in mm and converted to pixels via `PixelSpacing` from the DICOM header (fallback for ~0.07 mm/px).
+Horizontal rectangular PSF simulating patient/detector motion during exposure. Length is specified in mm and converted to pixels via `PixelSpacing` from the DICOM header. Values are chosen so each severity level maps to a **distinct odd kernel size** at the VinDr-Mammo pixel spacing of 0.085 mm/px.
 
-| Severity | `length_mm` | `length_px` (fallback) |
-|---|---|---|
-| 1 | 0.10 | 3 |
-| 2 | 0.25 | 5 |
-| 3 | 0.50 | 7 |
-| 4 | 0.75 | 11 |
-| 5 | 1.00 | 15 |
-| 6 | 1.50 | 21 |
+| Severity | `length_mm` | `kernel_px` (at 0.085 mm/px) | `length_px` (fallback) |
+|---|---|---|---|
+| 1 | 0.26 | 3 | 3 |
+| 2 | 0.43 | 5 | 5 |
+| 3 | 0.60 | 7 | 7 |
+| 4 | 0.77 | 9 | 9 |
+| 5 | 0.94 | 11 | 11 |
+| 6 | 1.45 | 17 | 17 |
 
 ### Contrast compression
 Linear contrast reduction centered on the masked tissue median: `x_out = α·(x_in − center) + center`.
@@ -56,7 +56,31 @@ Linear contrast reduction centered on the masked tissue median: `x_out = α·(x_
 | 5 | 0.75 |
 | 6 | 0.70 |
 
-Each batch run produces **19 variants per image**: 1 baseline + 6 noise + 6 motion blur + 6 contrast.
+### JPEG 2000 compression
+Lossy wavelet compression at increasing compression ratios. CR=10 is clinically acceptable; CR=500 causes severe detail loss.
+
+| Severity | `compression_ratio` |
+|---|---|
+| 1 | 10 |
+| 2 | 25 |
+| 3 | 50 |
+| 4 | 100 |
+| 5 | 250 |
+| 6 | 500 |
+
+### Spatial resolution loss
+Downscale with `INTER_AREA` then upscale back to original size with `INTER_LINEAR`, simulating reduced detector resolution or pixel binning.
+
+| Severity | `scale_factor` |
+|---|---|
+| 1 | 0.90 |
+| 2 | 0.75 |
+| 3 | 0.60 |
+| 4 | 0.50 |
+| 5 | 0.40 |
+| 6 | 0.33 |
+
+Each batch run produces **31 variants per image**: 1 baseline + 6 noise + 6 motion blur + 6 contrast + 6 JPEG 2000 + 6 resolution.
 
 ## Metrics
 
