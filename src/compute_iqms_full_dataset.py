@@ -262,6 +262,8 @@ def _param_info(spec_dict: dict) -> tuple[str, Any]:
         return "alpha", params.get("alpha", "")
     if dt == "jpeg2000":
         return "compression_ratio", params.get("compression_ratio", "")
+    if dt == "resolution":
+        return "scale_factor", params.get("scale_factor", "")
     return "unknown", ""
 
 
@@ -931,7 +933,7 @@ def main() -> None:
         {"degradation_type": s.degradation_type, "severity": s.severity, "params": dict(s.params)}
         for s in plan
     ]
-    logging.info("Degradation plan: %d variants per image (1 baseline + %d degradations: 6 noise + 6 motion_blur + 6 contrast + 6 jpeg2000).",
+    logging.info("Degradation plan: %d variants per image (1 baseline + %d degradations: 6 noise + 6 motion_blur + 6 contrast + 6 jpeg2000 + 6 resolution).",
                  len(plan), len(plan) - 1)
     logging.info("Total metric computations (full dataset): %d × %d = %d",
                  len(all_dicoms), len(plan), len(all_dicoms) * len(plan))
