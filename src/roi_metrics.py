@@ -637,16 +637,62 @@ def compute_fixed_roi_metrics(
 
 SEVERITY_PRESETS: dict[str, list] = {
     # Physical motion blur lengths in mm (converted to px via PixelSpacing).
-    # Fallback pixel values pre-computed at 0.07 mm/px (VinDr-Mammo typical).
-    "motion_blur_mm":          [0.10, 0.25, 0.50, 0.75, 1.00, 1.50],
-    "motion_blur_px_fallback": [   3,    5,    7,   11,   15,   21],
+    #
+    # These values were chosen so that each severity level resolves to a
+    # *distinct odd kernel size* at the VinDr-Mammo pixel spacing of 0.085 mm/px.
+    # The conversion uses nearest-odd rounding (mm / spacing → round → force odd),
+    # so naive equal-step mm values can collapse to the same kernel — e.g. both
+    # 0.10 mm and 0.25 mm would map to 3 px and produce identical output.
+    # The schedule below guarantees kernels of 3, 5, 7, 9, 11, 17 px at 0.085 mm/px.
+    #
+    # Fallback pixel values are the target odd kernel sizes themselves, used
+    # verbatim when PixelSpacing is unavailable (PNG/JPEG input, missing tag).
+    "motion_blur_mm":          [0.26, 0.43, 0.60, 0.77, 0.94, 1.45],
+    "motion_blur_px_fallback": [   3,    5,    7,    9,   11,   17],
     # Dose reduction factors relative to the original acquisition (1.0 = full dose).
     # Quantum noise variance scales as 1/dose, so lower values → more noise.
     "dose_factors":            [0.95, 0.85, 0.75, 0.65, 0.50, 0.35],
     # Linear contrast compression factors (1.0 = no change, 0.0 = flat image).
     # Conservative range: mildest degradation first.
     "contrast_alpha":          [0.95, 0.90, 0.85, 0.80, 0.75, 0.70],
+    # JPEG 2000 compression ratios (higher = more lossy).
+    # CR=10 is clinically acceptable; CR=500 causes severe detail loss.
+    "jpeg2000_compression_ratios": [10, 25, 50, 100, 250, 500],
+    # Spatial resolution downscale factors (1.0 = original; lower = more degraded).
+    # Each level downscales by this factor (INTER_AREA) then upscales back to
+    # the original size (INTER_LINEAR), introducing anti-aliased blurring.
+    # Chosen to span clinically plausible detector-binning artefacts while
+    # keeping adjacent levels visually distinct.
+    "resolution_scale_factors": [0.90, 0.75, 0.60, 0.50, 0.40, 0.33],
 }
+
+
+def print_motion_blur_kernel_sizes(pixel_spacing_mm: float = 0.085) -> None:
+    """Print a verification table showing how each motion blur severity level
+    resolves to a kernel size at a given pixel spacing.
+
+    Useful for confirming that no two severity levels collapse to the same
+    effective kernel — call this after changing SEVERITY_PRESETS.
+
+    Parameters
+    ----------
+    pixel_spacing_mm : float
+        Pixel spacing to use for the verification (default: 0.085 mm/px,
+        the VinDr-Mammo dataset value).
+    """
+    print(f"\nMotion blur kernel resolution at {pixel_spacing_mm} mm/px:")
+    print(f"  {'Sev':>3}  {'mm':>6}  {'px_raw':>7}  {'kernel_px':>9}  {'fallback_px':>11}")
+    print(f"  {'-'*3}  {'-'*6}  {'-'*7}  {'-'*9}  {'-'*11}")
+    mm_list  = SEVERITY_PRESETS["motion_blur_mm"]
+    fb_list  = SEVERITY_PRESETS["motion_blur_px_fallback"]
+    for sev, (mm, fb) in enumerate(zip(mm_list, fb_list), start=1):
+        px_raw = mm / pixel_spacing_mm
+        px_int = max(1, int(round(px_raw)))
+        if px_int % 2 == 0:
+            px_int += 1
+        kernel_px = max(3, px_int)
+        print(f"  {sev:>3}  {mm:>6.2f}  {px_raw:>7.2f}  {kernel_px:>9d}  {fb:>11d}")
+    print()
 
 
 # =============================================================================
@@ -767,14 +813,27 @@ def apply_motion_blur(
     # --- Resolve kernel length in pixels ------------------------------------
     if length_mm is not None and pixel_spacing_mm is not None:
         # Physically calibrated path: mm → pixels via DICOM pixel spacing.
+        # Use nearest-odd rounding so the result is always a centred odd kernel
+        # and adjacent severity levels cannot silently collapse to the same size.
+        # Formula: px_raw = mm / spacing → round to nearest integer → if even,
+        # step to the next odd value → clamp to minimum 3.
         if length_mm <= 0:
             raise ValueError(f"length_mm must be > 0, got {length_mm}")
         if pixel_spacing_mm <= 0:
             raise ValueError(f"pixel_spacing_mm must be > 0, got {pixel_spacing_mm}")
-        resolved_px = max(3, int(round(length_mm / pixel_spacing_mm)))
+        px_raw = length_mm / pixel_spacing_mm
+        px_int = max(1, int(round(px_raw)))
+        # Force odd: if even, add 1 (always rounds *up* to avoid going below
+        # the physically intended blur length).
+        if px_int % 2 == 0:
+            px_int += 1
+        resolved_px = max(3, px_int)
     elif length_px is not None:
         # Image-space fallback — not physically calibrated.
-        resolved_px = max(3, int(length_px))
+        px_int = max(1, int(length_px))
+        if px_int % 2 == 0:
+            px_int += 1
+        resolved_px = max(3, px_int)
     else:
         raise ValueError(
             "Provide (length_mm + pixel_spacing_mm) for a physically calibrated "
@@ -937,6 +996,100 @@ def apply_contrast_reduction(
     return clip01(out)
 
 
+# --- Spatial resolution loss -------------------------------------------------
+
+def apply_resolution_degradation(
+    image: ArrayLike,
+    scale_factor: float,
+) -> np.ndarray:
+    """Simulate spatial resolution loss by downscaling then upscaling.
+
+    Downscales the image by ``scale_factor`` using INTER_AREA (area-averaging,
+    anti-aliased), then upscales back to the original size with INTER_LINEAR.
+    The round-trip introduces blurring proportional to the degree of
+    downscaling, mimicking reduced detector resolution or image binning.
+
+    Parameters
+    ----------
+    image : array-like, float32, shape (H, W)
+        Normalised mammogram in [0, 1].
+    scale_factor : float
+        Downscale factor in (0, 1]. 1.0 = no change; smaller values produce
+        stronger resolution loss (e.g. 0.5 halves the linear resolution before
+        upsampling back).
+
+    Returns
+    -------
+    degraded : np.ndarray, float32
+        Resolution-degraded image of the same spatial shape, clipped to [0, 1].
+
+    Raises
+    ------
+    ValueError
+        If ``scale_factor`` is not in (0, 1].
+    """
+    import cv2  # type: ignore
+
+    if not (0 < scale_factor <= 1.0):
+        raise ValueError(f"scale_factor must be in (0, 1], got {scale_factor}")
+
+    x = np.asarray(image, dtype=np.float32)
+    h, w = x.shape
+
+    if scale_factor == 1.0:
+        return x.copy()
+
+    small_h = max(1, int(round(h * scale_factor)))
+    small_w = max(1, int(round(w * scale_factor)))
+
+    # Downscale: INTER_AREA averages pixel neighbourhoods — the correct choice
+    # for shrinking because it avoids aliasing artefacts (unlike INTER_LINEAR).
+    small = cv2.resize(x, (small_w, small_h), interpolation=cv2.INTER_AREA)
+    # Upscale: INTER_LINEAR introduces the bilinear blurring that characterises
+    # the information loss at the lower sampling rate.
+    restored = cv2.resize(small, (w, h), interpolation=cv2.INTER_LINEAR)
+    return clip01(restored)
+
+
+def generate_resolution_variants(
+    image: ArrayLike,
+    severities: Sequence[int] | None = None,
+) -> list[tuple[int, np.ndarray]]:
+    """Generate resolution-degraded variants for the requested severity levels.
+
+    Convenience wrapper around ``apply_resolution_degradation`` and
+    ``SEVERITY_PRESETS["resolution_scale_factors"]``.  Produces the full
+    degradation ladder for a single image without manual iteration over
+    severity indices.
+
+    Parameters
+    ----------
+    image : array-like, float32, shape (H, W)
+        Normalised mammogram in [0, 1].
+    severities : sequence of int, optional
+        Severity indices to generate (1–6). Defaults to all six levels.
+
+    Returns
+    -------
+    variants : list of (severity, degraded_image) tuples
+        One entry per requested severity, in ascending severity order.
+
+    Example
+    -------
+    >>> for sev, img_deg in generate_resolution_variants(original_img):
+    ...     metrics = compute_fixed_roi_metrics(original_img, img_deg, ...)
+    """
+    if severities is None:
+        severities = range(1, 7)
+    variants: list[tuple[int, np.ndarray]] = []
+    for sev in severities:
+        if not (1 <= sev <= 6):
+            raise ValueError(f"severity must be between 1 and 6, got {sev}")
+        scale = SEVERITY_PRESETS["resolution_scale_factors"][sev - 1]
+        variants.append((sev, apply_resolution_degradation(image, scale_factor=scale)))
+    return variants
+
+
 # =============================================================================
 # Pipeline dispatcher
 # =============================================================================
@@ -957,21 +1110,26 @@ def apply_degradation(
 
     Severity indices (1–6) map to ``SEVERITY_PRESETS``:
 
-        severity  motion_blur_mm  dose_factor  contrast_alpha
-        --------  --------------  -----------  --------------
-           1           0.10          0.95          0.95
-           2           0.25          0.85          0.90
-           3           0.50          0.75          0.85
-           4           0.75          0.65          0.80
-           5           1.00          0.50          0.75
-           6           1.50          0.35          0.70
+        severity  motion_blur_mm  kernel_px*  dose_factor  contrast_alpha
+        --------  --------------  ----------  -----------  --------------
+           1           0.26           3          0.95          0.95
+           2           0.43           5          0.85          0.90
+           3           0.60           7          0.75          0.85
+           4           0.77           9          0.65          0.80
+           5           0.94          11          0.50          0.75
+           6           1.45          17          0.35          0.70
+
+        * kernel_px at VinDr-Mammo pixel spacing of 0.085 mm/px.
+          Each level maps to a distinct odd kernel to prevent quantization
+          collapse of adjacent severity levels.
 
     Parameters
     ----------
     image : array-like, float32, shape (H, W)
         Normalised mammogram in [0, 1].
     degradation_type : str
-        One of ``"none"``, ``"noise"``, ``"motion_blur"``, ``"contrast"``.
+        One of ``"none"``, ``"noise"``, ``"motion_blur"``, ``"contrast"``,
+        ``"jpeg2000"``, ``"resolution"``.
     severity : int
         Severity index 1–6 (ignored when degradation_type is "none").
     pixel_spacing_mm : float, optional
@@ -1037,16 +1195,39 @@ def apply_degradation(
             center_mode=center_mode,
         )
 
+    if degradation_type == "jpeg2000":
+        import importlib.util as _ilu, sys as _sys
+        _here = Path(__file__).resolve().parent
+        _jp2_path = _here / "jpeg2000_degradation.py"
+        if "jpeg2000_degradation" not in _sys.modules:
+            _spec = _ilu.spec_from_file_location("jpeg2000_degradation", str(_jp2_path))
+            _mod = _ilu.module_from_spec(_spec)
+            _sys.modules["jpeg2000_degradation"] = _mod
+            _spec.loader.exec_module(_mod)
+        _jp2 = _sys.modules["jpeg2000_degradation"]
+        cr = SEVERITY_PRESETS["jpeg2000_compression_ratios"][idx]
+        degraded = _jp2.apply_jpeg2000_degradation(
+            np.asarray(image, dtype=np.float64), compression_ratio=cr
+        )
+        return degraded.astype(np.float32)
+
+    if degradation_type == "resolution":
+        return apply_resolution_degradation(
+            image,
+            scale_factor=SEVERITY_PRESETS["resolution_scale_factors"][idx],
+        )
+
     raise ValueError(
         f"Unknown degradation_type: {degradation_type!r}. "
-        f"Valid types: 'none', 'noise', 'motion_blur', 'contrast'."
+        f"Valid types: 'none', 'noise', 'motion_blur', 'contrast', 'jpeg2000', 'resolution'."
     )
 
 
 def build_default_degradation_plan() -> list[DegradationSpec]:
-    """Build the default degradation plan: 19 variants per image.
+    """Build the default degradation plan: 31 variants per image.
 
-    1 baseline (none) + 6 noise + 6 motion_blur + 6 contrast.
+    1 baseline (none) + 6 noise + 6 motion_blur + 6 contrast + 6 jpeg2000
+    + 6 resolution.
 
     DegradationSpec.params stores the resolved parameter values so they are
     logged in the output CSV via ``row.update(spec.params)``.
@@ -1067,6 +1248,16 @@ def build_default_degradation_plan() -> list[DegradationSpec]:
     for sev in range(1, 7):
         plan.append(DegradationSpec("contrast", sev, {
             "alpha": SEVERITY_PRESETS["contrast_alpha"][sev - 1],
+        }))
+
+    for sev in range(1, 7):
+        plan.append(DegradationSpec("jpeg2000", sev, {
+            "compression_ratio": SEVERITY_PRESETS["jpeg2000_compression_ratios"][sev - 1],
+        }))
+
+    for sev in range(1, 7):
+        plan.append(DegradationSpec("resolution", sev, {
+            "scale_factor": SEVERITY_PRESETS["resolution_scale_factors"][sev - 1],
         }))
 
     return plan
@@ -1128,14 +1319,25 @@ def save_image_png(image: ArrayLike, out_path: str | Path) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    print(
-        "Import this module into your experiment pipeline.\n"
-        "Recommended workflow:\n"
-        "1) read_mammogram\n"
-        "2) create_breast_mask on original\n"
-        "3) crop_to_breast\n"
-        "4) estimate_fixed_normalization on original crop\n"
-        "5) select fixed ROIs on normalized original crop\n"
-        "6) apply degradations on normalized original crop\n"
-        "7) compute metrics with compute_fixed_roi_metrics\n"
+    import math
+
+    print("Resolution degradation test — synthetic 512×512 gradient image")
+    print(f"  {'Severity':>8}  {'Scale':>6}  {'PSNR (dB)':>10}  {'Max |diff|':>11}")
+    print(f"  {'--------':>8}  {'-----':>6}  {'---------':>10}  {'-----------':>11}")
+
+    H, W = 512, 512
+    yy, xx = np.meshgrid(
+        np.linspace(0, 1, H, dtype=np.float32),
+        np.linspace(0, 1, W, dtype=np.float32),
+        indexing="ij",
     )
+    gradient_img = clip01((yy + xx) / 2.0)
+
+    for sev, degraded in generate_resolution_variants(gradient_img):
+        scale = SEVERITY_PRESETS["resolution_scale_factors"][sev - 1]
+        diff = gradient_img - degraded
+        max_diff = float(np.abs(diff).max())
+        mse = float(np.mean(diff ** 2))
+        psnr = float("inf") if mse == 0.0 else 10.0 * math.log10(1.0 / mse)
+        psnr_str = f"{psnr:10.2f}" if math.isfinite(psnr) else f"{'inf':>10}"
+        print(f"  {sev:>8}  {scale:>6.2f}  {psnr_str}  {max_diff:>11.6f}")
