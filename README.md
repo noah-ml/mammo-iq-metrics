@@ -6,6 +6,7 @@ Quantitative analysis of how image quality degradation affects deep learning mod
 > In cooperation with the Physikalisch-Technische Bundesanstalt (PTB)
 
 ## Overview
+The repository is designed as a reproducible research pipeline for image-quality metric analysis in mammography.
 
 This pipeline systematically quantifies how defined image quality dimensions affect the performance (AUC), calibration, and sensitivity of deep learning models for mammography. The approach:
 
