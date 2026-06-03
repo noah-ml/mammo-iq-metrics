@@ -204,9 +204,9 @@ Expected layout:
 ## Output
 
 Each batch run produces:
-- `metrics_batch.csv` — one row per image × degradation variant
-- `run_summary.json` — config, per-image summaries, error log
-- `<image_id>/` — QC overlay PNGs and per-image `_summary.json`
+- `metrics_batch.csv`: one row per image × degradation variant
+- `run_summary.json`: config, per-image summaries, error log
+- `<image_id>/`: QC overlay PNGs and per-image `_summary.json`
 
 ## Tech Stack
 
