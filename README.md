@@ -107,6 +107,11 @@ ROIs are always determined on the **original image** and reused for all degraded
 │   ├── roi_metrics.py      # Core DICOM-first toolkit: masking, ROI selection, metrics, degradations
 │   ├── test_runner.py      # Single-image and batch-list experiment runner
 │   └── run_batch.py        # Stratified 50-sample batch pipeline
+├── training/
+│   ├── mammo-18-v3.py      # Multi-arch classifier (ResNet-18, EfficientNet-B4, ConvNeXt-Tiny)
+│   └── submit_convnext_1024x384_5positive.sh  # SLURM script for ConvNeXt 5-positive run
+├── figures/
+│   └── convnext_5pos_roc.png  # ROC curve — ConvNeXt-Tiny BI-RADS 5 baseline
 ├── configs/
 │   └── default.yaml        # Pipeline configuration and degradation plan
 ├── tests/
@@ -207,6 +212,39 @@ Each batch run produces:
 - `metrics_batch.csv` — one row per image × degradation variant
 - `run_summary.json` — config, per-image summaries, error log
 - `<image_id>/` — QC overlay PNGs and per-image `_summary.json`
+
+## Classification Baseline
+
+Reference classification result on the official VinDr-Mammo test split, used as the primary robustness baseline for the degradation experiment.
+
+**Model:** ConvNeXt-Tiny, fine-tuned from ImageNet weights  
+**Task:** Binary classification — BI-RADS 5 (malignant) vs. BI-RADS 1–4  
+**Input:** 1024 × 384 px padded breast crop (DICOM → float32 normalised)  
+**Split:** Official VinDr-Mammo patient-level train / val / test (no patient overlap verified)  
+**Test set:** 3,814 images · 46 positives · 1.2% prevalence
+
+| Metric | Value |
+|---|---|
+| AUC-ROC | **0.9708** |
+| Sensitivity | 0.9348 |
+| Specificity | 0.9591 |
+| ECE (10 bins) | 0.183 |
+| Brier score | 0.046 |
+
+Threshold selected by Youden's J-statistic on the validation set (τ = 0.390).
+
+**Stratified AUC by breast density (ACR):**
+
+| Density | AUC | n | n_pos |
+|---|---|---|---|
+| B | 0.9901 | 366 | 12 |
+| C | 0.9616 | 2,916 | 32 |
+| D | 0.9971 | 512 | 2 |
+
+![ROC Curve](figures/convnext_5pos_roc.png)
+
+Training script: [`training/mammo-18-v3.py`](training/mammo-18-v3.py)  
+SLURM submit script: [`training/submit_convnext_1024x384_5positive.sh`](training/submit_convnext_1024x384_5positive.sh)
 
 ## Tech Stack
 
