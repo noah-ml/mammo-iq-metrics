@@ -111,7 +111,7 @@ ROIs are always determined on the **original image** and reused for all degraded
 │   ├── mammo-18-v3.py      # Multi-arch classifier (ResNet-18, EfficientNet-B4, ConvNeXt-Tiny)
 │   └── submit_convnext_1024x384_5positive.sh  # SLURM script for ConvNeXt 5-positive run
 ├── figures/
-│   └── convnext_5pos_roc.png  # ROC curve — ConvNeXt-Tiny BI-RADS 5 baseline
+│   └── convnext_5pos_roc.png  # ROC curve: ConvNeXt-Tiny BI-RADS 5 baseline
 ├── configs/
 │   └── default.yaml        # Pipeline configuration and degradation plan
 ├── tests/
@@ -218,7 +218,7 @@ Each batch run produces:
 Reference classification result on the official VinDr-Mammo test split, used as the primary robustness baseline for the degradation experiment.
 
 **Model:** ConvNeXt-Tiny, fine-tuned from ImageNet weights  
-**Task:** Binary classification — BI-RADS 5 (malignant) vs. BI-RADS 1–4  
+**Task:** Binary classification: BI-RADS 5 (malignant) vs. BI-RADS 1–4  
 **Input:** 1024 × 384 px padded breast crop (DICOM → float32 normalised)  
 **Split:** Official VinDr-Mammo patient-level train / val / test (no patient overlap verified)  
 **Test set:** 3,814 images · 46 positives · 1.2% prevalence
