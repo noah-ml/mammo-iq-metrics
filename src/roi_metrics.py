@@ -636,19 +636,18 @@ def compute_fixed_roi_metrics(
 # =============================================================================
 
 SEVERITY_PRESETS: dict[str, list] = {
-    # Physical motion blur lengths in mm (converted to px via PixelSpacing).
+    # Directional motion blur, given directly as odd kernel lengths in pixels.
     #
-    # These values were chosen so that each severity level resolves to a
-    # *distinct odd kernel size* at the VinDr-Mammo pixel spacing of 0.085 mm/px.
-    # The conversion uses nearest-odd rounding (mm / spacing → round → force odd),
-    # so naive equal-step mm values can collapse to the same kernel — e.g. both
-    # 0.10 mm and 0.25 mm would map to 3 px and produce identical output.
-    # The schedule below guarantees kernels of 3, 5, 7, 9, 11, 17 px at 0.085 mm/px.
+    # An earlier mm-first schedule (converted to px via PixelSpacing with
+    # nearest-odd rounding) was abandoned: at the sub-0.1 mm pixel spacings of
+    # this dataset the milder nominal lengths all collapse onto a 3 px kernel
+    # and yield identical images. Fixing the length in pixels guarantees that
+    # every severity level is distinct and monotonically stronger.
     #
-    # Fallback pixel values are the target odd kernel sizes themselves, used
-    # verbatim when PixelSpacing is unavailable (PNG/JPEG input, missing tag).
-    "motion_blur_mm":          [0.26, 0.43, 0.60, 0.77, 0.94, 1.45],
-    "motion_blur_px_fallback": [   3,    5,    7,    9,   11,   17],
+    # On the 1024x384 working canvas one pixel spans a median of 0.240 mm
+    # (IQR 0.213-0.281), so these kernels correspond to median motion extents
+    # of 0.72, 1.20, 1.68, 2.64, 3.60 and 5.04 mm in the patient plane.
+    "motion_blur_px":          [3, 5, 7, 11, 15, 21],
     # Dose reduction factors relative to the original acquisition (1.0 = full dose).
     # Quantum noise variance scales as 1/dose, so lower values → more noise.
     "dose_factors":            [0.95, 0.85, 0.75, 0.65, 0.50, 0.35],
@@ -659,39 +658,31 @@ SEVERITY_PRESETS: dict[str, list] = {
     # CR=10 is clinically acceptable; CR=500 causes severe detail loss.
     "jpeg2000_compression_ratios": [10, 25, 50, 100, 250, 500],
     # Spatial resolution downscale factors (1.0 = original; lower = more degraded).
-    # Each level downscales by this factor (INTER_AREA) then upscales back to
-    # the original size (INTER_LINEAR), introducing anti-aliased blurring.
-    # Chosen to span clinically plausible detector-binning artefacts while
-    # keeping adjacent levels visually distinct.
-    "resolution_scale_factors": [0.90, 0.75, 0.60, 0.50, 0.40, 0.33],
+    # Each level downscales by this factor (INTER_AREA, area averaging) then
+    # upscales back to the original size (INTER_CUBIC, bicubic), discarding
+    # high-frequency detail while preserving overall geometry.
+    "resolution_scale_factors": [0.90, 0.80, 0.70, 0.60, 0.50, 0.40],
 }
 
 
-def print_motion_blur_kernel_sizes(pixel_spacing_mm: float = 0.085) -> None:
-    """Print a verification table showing how each motion blur severity level
-    resolves to a kernel size at a given pixel spacing.
+def print_motion_blur_kernel_sizes(canvas_pixel_mm: float = 0.240) -> None:
+    """Print the motion blur kernel schedule and its extent in the patient plane.
 
-    Useful for confirming that no two severity levels collapse to the same
-    effective kernel — call this after changing SEVERITY_PRESETS.
+    Kernel lengths are fixed in pixels, so the schedule cannot collapse; this
+    helper simply reports what each level means physically for a given canvas
+    pixel size.
 
     Parameters
     ----------
-    pixel_spacing_mm : float
-        Pixel spacing to use for the verification (default: 0.085 mm/px,
-        the VinDr-Mammo dataset value).
+    canvas_pixel_mm : float
+        Size of one working-canvas pixel in mm (default: 0.240, the median over
+        the 20,000 VinDr-Mammo images after crop-and-resize to 1024x384).
     """
-    print(f"\nMotion blur kernel resolution at {pixel_spacing_mm} mm/px:")
-    print(f"  {'Sev':>3}  {'mm':>6}  {'px_raw':>7}  {'kernel_px':>9}  {'fallback_px':>11}")
-    print(f"  {'-'*3}  {'-'*6}  {'-'*7}  {'-'*9}  {'-'*11}")
-    mm_list  = SEVERITY_PRESETS["motion_blur_mm"]
-    fb_list  = SEVERITY_PRESETS["motion_blur_px_fallback"]
-    for sev, (mm, fb) in enumerate(zip(mm_list, fb_list), start=1):
-        px_raw = mm / pixel_spacing_mm
-        px_int = max(1, int(round(px_raw)))
-        if px_int % 2 == 0:
-            px_int += 1
-        kernel_px = max(3, px_int)
-        print(f"  {sev:>3}  {mm:>6.2f}  {px_raw:>7.2f}  {kernel_px:>9d}  {fb:>11d}")
+    print(f"\nMotion blur schedule at {canvas_pixel_mm} mm per canvas pixel:")
+    print(f"  {'Sev':>3}  {'kernel_px':>9}  {'extent_mm':>9}")
+    print(f"  {'-'*3}  {'-'*9}  {'-'*9}")
+    for sev, px in enumerate(SEVERITY_PRESETS["motion_blur_px"], start=1):
+        print(f"  {sev:>3}  {px:>9d}  {px * canvas_pixel_mm:>9.2f}")
     print()
 
 
@@ -1090,7 +1081,7 @@ def apply_resolution_degradation(
     """Simulate spatial resolution loss by downscaling then upscaling.
 
     Downscales the image by ``scale_factor`` using INTER_AREA (area-averaging,
-    anti-aliased), then upscales back to the original size with INTER_LINEAR.
+    anti-aliased), then upscales back to the original size with INTER_CUBIC.
     The round-trip introduces blurring proportional to the degree of
     downscaling, mimicking reduced detector resolution or image binning.
 
@@ -1130,9 +1121,9 @@ def apply_resolution_degradation(
     # Downscale: INTER_AREA averages pixel neighbourhoods — the correct choice
     # for shrinking because it avoids aliasing artefacts (unlike INTER_LINEAR).
     small = cv2.resize(x, (small_w, small_h), interpolation=cv2.INTER_AREA)
-    # Upscale: INTER_LINEAR introduces the bilinear blurring that characterises
-    # the information loss at the lower sampling rate.
-    restored = cv2.resize(small, (w, h), interpolation=cv2.INTER_LINEAR)
+    # Upscale: INTER_CUBIC restores the original dimensions without recovering
+    # the detail discarded at the lower sampling rate.
+    restored = cv2.resize(small, (w, h), interpolation=cv2.INTER_CUBIC)
     return clip01(restored)
 
 
@@ -1195,18 +1186,18 @@ def apply_degradation(
 
     Severity indices (1–6) map to ``SEVERITY_PRESETS``:
 
-        severity  motion_blur_mm  kernel_px*  dose_factor  contrast_alpha
-        --------  --------------  ----------  -----------  --------------
-           1           0.26           3          0.95          0.95
-           2           0.43           5          0.85          0.90
-           3           0.60           7          0.75          0.85
-           4           0.77           9          0.65          0.80
-           5           0.94          11          0.50          0.75
-           6           1.45          17          0.35          0.70
+        severity  kernel_px  extent_mm*  dose_factor  contrast_alpha  scale
+        --------  ---------  ----------  -----------  --------------  -----
+           1           3         0.72        0.95          0.95        0.90
+           2           5         1.20        0.85          0.90        0.80
+           3           7         1.68        0.75          0.85        0.70
+           4          11         2.64        0.65          0.80        0.60
+           5          15         3.60        0.50          0.75        0.50
+           6          21         5.04        0.35          0.70        0.40
 
-        * kernel_px at VinDr-Mammo pixel spacing of 0.085 mm/px.
-          Each level maps to a distinct odd kernel to prevent quantization
-          collapse of adjacent severity levels.
+        * extent_mm is the median over the dataset, at 0.240 mm per canvas
+          pixel. Kernel lengths are fixed in pixels so that every severity
+          level stays distinct.
 
     Parameters
     ----------
@@ -1265,10 +1256,8 @@ def apply_degradation(
     if degradation_type == "motion_blur":
         blurred, _ = apply_motion_blur(
             image,
-            length_mm=SEVERITY_PRESETS["motion_blur_mm"][idx],
-            length_px=SEVERITY_PRESETS["motion_blur_px_fallback"][idx],
+            length_px=SEVERITY_PRESETS["motion_blur_px"][idx],
             angle=angle,
-            pixel_spacing_mm=pixel_spacing_mm,
         )
         return blurred
 
@@ -1314,7 +1303,7 @@ def build_default_degradation_plan() -> list[DegradationSpec]:
 
     for sev in range(1, 7):
         plan.append(DegradationSpec("motion_blur", sev, {
-            "length_mm": SEVERITY_PRESETS["motion_blur_mm"][sev - 1],
+            "length_px": SEVERITY_PRESETS["motion_blur_px"][sev - 1],
             "angle": 0.0,
         }))
 
