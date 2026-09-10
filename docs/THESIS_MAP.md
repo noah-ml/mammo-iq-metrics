@@ -8,8 +8,9 @@ Two conventions run through this repository:
 - `MAMMO_OUT_DIR` receives everything generated (default `./results`).
 
 The raw mammograms come from [VinDr-Mammo](https://physionet.org/content/vindr-mammo/),
-which requires credentialed access through PhysioNet. Nothing derived from its annotations
-is redistributed here: see [Data that is deliberately absent](#data-that-is-deliberately-absent).
+which requires credentialed access through PhysioNet. The released tables carry the model
+outputs, the image quality metrics and the label columns, so the results can be recomputed
+without the images.
 
 ---
 
@@ -22,9 +23,9 @@ Every quantitative claim in the results chapter follows from them:
 ```bash
 export MAMMO_DATA_DIR=/path/to/data
 python reproduce/reproduce_from_predictions.py \
-    --results-csv     $MAMMO_DATA_DIR/convnext_nojitter_results_MASKEDSSIM_REFTAU.csv \
-    --multiarch-dir   $MAMMO_DATA_DIR/multiarch \
-    --val-predictions $MAMMO_DATA_DIR/val_clean_predictions.csv
+    --results-csv     $MAMMO_DATA_DIR/predictions/convnext_tiny_s42_degradation_results.csv \
+    --multiarch-dir   $MAMMO_DATA_DIR/predictions \
+    --val-predictions $MAMMO_DATA_DIR/predictions/val_clean_predictions.csv
 ```
 
 It recomputes fifteen headline quantities and checks each against the value printed in the
@@ -43,11 +44,17 @@ thesis, exiting non-zero on any drift:
 | Condition-level bridge, SSIM against AUC | +0.78 | §5.4 |
 | Clean AUC by architecture | 0.828 / 0.782 / 0.753 | §5.3.3 |
 
-Two definitions matter and are easy to get wrong. ECE uses **15 equally spaced bins**
-throughout; the uncalibrated value barely moves with the bin count, but the recalibrated one
-does, because Platt scaling concentrates the probabilities near the base rate. And the
-released tables label the undegraded variant **`clean`**, not `none`, and motion blur
-**`blur`**, not `motion_blur`.
+Three definitions matter and are easy to get wrong.
+
+1. **ECE uses 15 equally spaced bins** throughout. The uncalibrated value barely moves with the
+   bin count, but the recalibrated one does, because Platt scaling concentrates the
+   probabilities near the base rate. At 10 bins the recalibrated value reads 0.004, not 0.009.
+2. **The correlations above are JPEG 2000-specific**, not pooled over all degradations. Pooling
+   everything gives about -0.41, which the thesis does not claim. The +0.78 bridge is a
+   different object again: one point per condition, condition-mean SSIM against the AUC achieved
+   under that condition.
+3. The released tables label the undegraded variant **`clean`**, not `none`, and motion blur
+   **`blur`**, not `motion_blur`. The toolkit in `src/` uses the other names.
 
 ---
 
@@ -92,6 +99,7 @@ layout. Figure 2.1 is a raster from the IAEA and has no generating script.
 | Evaluation: degrade, infer, compute metrics per variant | `experiments/evaluate_degradations.py` |
 | Aggregate into per-condition metrics | `experiments/analyze_degradation_results.py` |
 | Lesion boxes mapped onto the working canvas | `experiments/build_lesion_roi_lookup.py` |
+| Masked SSIM and reference tau, as reported | `experiments/recompute_ssim_tau.py` |
 | Training, all three architectures | `experiments/training/mammo-18-v3.py` |
 | Job scripts as submitted | `experiments/slurm/*.slurm` |
 
@@ -140,26 +148,34 @@ from. `experiments/slurm/evaluate_degradations.slurm` runs it across all nine.
 
 ---
 
-## Data that is deliberately absent
+## A caveat on the metric columns
 
-VinDr-Mammo is distributed under a credentialed PhysioNet licence, so this project does not
-redistribute the dataset or tables derived from its annotations.
+The primary model's table carries the metric definitions used throughout the thesis: SSIM
+restricted to the breast mask, the reference implementation of tau, and `contrast_iqr`. The
+other eight tables come straight from `evaluate_degradations.py` and carry **unmasked SSIM and
+the in-script tau**. Predictions are unaffected, so every AUC, average-precision, calibration
+and threshold result is directly comparable across all nine models; only the image quality
+columns differ in definition. `experiments/recompute_ssim_tau.py` produces the thesis
+definitions from an evaluation output.
 
-- **Label and metadata columns** (`label_45`, `label_5`, `density`, `manufacturer`) are removed
-  from the released prediction tables. `reproduce/join_labels.py` restores them from your own
-  copy of `breast-level_annotations.csv`, deriving `label_45` as BI-RADS 4 or 5 against 1 to 3
-  so the definition is visible rather than implied.
-- **The split manifest** is not shipped. `experiments/build_complete_splits_csv.py` regenerates
-  it deterministically (`StratifiedShuffleSplit`, seed 42, stratified on label and
-  manufacturer). Verify you rebuilt the identical file:
+## Data
 
-  | File | SHA-256 |
-  |---|---|
-  | `master_splits_1024x384_complete.csv` | `e8ef4f7c56797e1913281aff39b392b378df63f003a6235922e05b2c255a1b8f` |
-  | `lesion_roi_lookup_1024x384.csv` | `00e91c288dd49e951e2dc53d90aac7cfcd93e3e948e9678102de225bdfc0bb46` |
+The prediction tables ship complete, including `label_45`, `label_5`, `density` and
+`manufacturer`, so no join is needed. `reproduce/join_labels.py` remains available for tables
+that lack them, and it also documents how `label_45` is derived: BI-RADS 4 or 5 against 1 to 3.
+
+The split manifest is in the data record and can also be regenerated deterministically with
+`experiments/build_complete_splits_csv.py` (`StratifiedShuffleSplit`, seed 42, stratified on
+label and manufacturer). Checksums for the two frozen tables:
+
+| File | SHA-256 |
+|---|---|
+| `master_splits_1024x384_complete.csv` | `e8ef4f7c56797e1913281aff39b392b378df63f003a6235922e05b2c255a1b8f` |
+| `lesion_roi_lookup_1024x384.csv` | `00e91c288dd49e951e2dc53d90aac7cfcd93e3e948e9678102de225bdfc0bb46` |
 
 The split is 12,800 training, 3,200 validation and 4,000 test images over 20,000 images and
-5,000 studies, with 630, 160 and 198 positives respectively.
+5,000 studies, with 630, 160 and 198 positives respectively. The mammograms themselves come from
+PhysioNet under credentialed access and are not redistributed.
 
 ---
 

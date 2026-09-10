@@ -38,24 +38,19 @@ chapter follows from them, so nothing has to be retrained:
 export MAMMO_DATA_DIR=/path/to/released/data
 pip install -r requirements.txt
 python reproduce/reproduce_from_predictions.py \
-    --results-csv     $MAMMO_DATA_DIR/convnext_nojitter_results_MASKEDSSIM_REFTAU.csv \
-    --multiarch-dir   $MAMMO_DATA_DIR/multiarch \
-    --val-predictions $MAMMO_DATA_DIR/val_clean_predictions.csv
+    --results-csv     $MAMMO_DATA_DIR/predictions/convnext_tiny_s42_degradation_results.csv \
+    --multiarch-dir   $MAMMO_DATA_DIR/predictions \
+    --val-predictions $MAMMO_DATA_DIR/predictions/val_clean_predictions.csv
 ```
 
 This recomputes fifteen headline quantities and checks each against the value printed in the
 thesis, exiting non-zero if any drifts. `docs/THESIS_MAP.md` maps every figure, table and number
 to the script that produces it.
 
-VinDr-Mammo is credentialed-access data, so the label and metadata columns are removed from the
-released tables. Restore them from your own approved copy first:
-
-```bash
-python reproduce/join_labels.py \
-    --predictions        $MAMMO_DATA_DIR/convnext_nojitter_results_STRIPPED.csv \
-    --breast-annotations /path/to/vindr/breast-level_annotations.csv \
-    --output             $MAMMO_DATA_DIR/convnext_nojitter_results_MASKEDSSIM_REFTAU.csv
-```
+The tables ship with their label columns, so no join is needed. `reproduce/join_labels.py`
+restores them for any table that lacks them, from your own copy of
+`breast-level_annotations.csv`. The mammograms themselves are not redistributed: they come from
+[VinDr-Mammo](https://physionet.org/content/vindr-mammo/) under credentialed access.
 
 ## Degradations
 
