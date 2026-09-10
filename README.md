@@ -23,8 +23,39 @@ Step 3 is the design point that makes the comparison fair: regions are determine
 undegraded image and reused unchanged for all 31 variants, so a metric change reflects the
 degradation and not ROI drift.
 
-**Scope of this repository.** It contains the image quality metric and degradation toolkit. The
-degradation parameters below are the ones used for the thesis experiments.
+**Scope of this repository.** Everything behind the thesis: the image quality metric toolkit,
+the degradation operators, the training and evaluation code, the figure scripts, and a
+reproduction path that regenerates the results without a GPU. Model weights and per-image
+predictions are in the accompanying data record, since they are too large for git.
+
+## Reproducing the results
+
+The released prediction tables carry one row per image x degradation x severity, with the model
+logit and the image quality metrics for that variant. Every quantitative claim in the results
+chapter follows from them, so nothing has to be retrained:
+
+```bash
+export MAMMO_DATA_DIR=/path/to/released/data
+pip install -r requirements.txt
+python reproduce/reproduce_from_predictions.py \
+    --results-csv     $MAMMO_DATA_DIR/convnext_nojitter_results_MASKEDSSIM_REFTAU.csv \
+    --multiarch-dir   $MAMMO_DATA_DIR/multiarch \
+    --val-predictions $MAMMO_DATA_DIR/val_clean_predictions.csv
+```
+
+This recomputes fifteen headline quantities and checks each against the value printed in the
+thesis, exiting non-zero if any drifts. `docs/THESIS_MAP.md` maps every figure, table and number
+to the script that produces it.
+
+VinDr-Mammo is credentialed-access data, so the label and metadata columns are removed from the
+released tables. Restore them from your own approved copy first:
+
+```bash
+python reproduce/join_labels.py \
+    --predictions        $MAMMO_DATA_DIR/convnext_nojitter_results_STRIPPED.csv \
+    --breast-annotations /path/to/vindr/breast-level_annotations.csv \
+    --output             $MAMMO_DATA_DIR/convnext_nojitter_results_MASKEDSSIM_REFTAU.csv
+```
 
 ## Degradations
 
@@ -133,15 +164,29 @@ metric changes are attributable to the degradation.
 ## Project Structure
 
 ```
-├── src/
-│   ├── roi_metrics.py      # Core DICOM-first toolkit: masking, ROI selection, metrics, degradations
-│   ├── test_runner.py      # Single-image and batch-list experiment runner
-│   └── run_batch.py        # Stratified 50-sample batch pipeline
-├── configs/
-│   └── default.yaml        # Pipeline configuration and degradation plan
-├── tests/
-│   └── test_metrics.py     # Unit tests for metrics and degradations
-├── requirements.txt
+├── src/                    # image quality metric toolkit
+│   ├── roi_metrics.py      #   masking, ROI selection, metrics, degradations
+│   ├── test_runner.py      #   single-image and batch-list runner
+│   ├── run_batch.py        #   stratified 50-sample batch pipeline
+│   └── compute_iqms_full_dataset.py
+├── experiments/            # the code behind the reported results
+│   ├── degradations.py     #   the five operators, six severities each
+│   ├── evaluate_degradations.py   # degrade, infer, measure, per variant
+│   ├── analyze_degradation_results.py
+│   ├── build_lesion_roi_lookup.py
+│   ├── paths.py            #   MAMMO_DATA_DIR / MAMMO_OUT_DIR resolution
+│   ├── training/           #   mammo-18-v3.py, all three architectures
+│   ├── slurm/              #   job scripts as submitted
+│   └── panknin/            #   scripts answering specific examiner questions
+├── reproduce/
+│   ├── reproduce_from_predictions.py   # results chapter, no GPU
+│   └── join_labels.py      #   reattach VinDr columns from your own copy
+├── figures/                # every thesis figure, plus shared style
+├── docs/THESIS_MAP.md      # figure/table/number -> script
+├── configs/default.yaml
+├── tests/test_metrics.py
+├── requirements.txt        # light path: recompute from predictions
+├── requirements-lock.txt   # exact environment of the reported runs
 └── README.md
 ```
 
