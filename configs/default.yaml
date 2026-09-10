@@ -32,19 +32,18 @@ degradations:
     - {severity: 5, dose_factor: 0.50}
     - {severity: 6, dose_factor: 0.35}
 
-  # Physically parameterised horizontal motion blur.
-  # length_mm is converted to pixels via PixelSpacing from the DICOM header
-  # using nearest-odd rounding to guarantee a distinct odd kernel per severity.
-  # Values were chosen so each level maps to a distinct odd kernel at 0.085 mm/px
-  # (VinDr-Mammo typical spacing): 3, 5, 7, 9, 11, 17 px respectively.
-  # length_px_fallback is used verbatim when PixelSpacing is unavailable.
+  # Horizontal motion blur, given directly as odd kernel lengths in pixels.
+  # A mm-first schedule collapses at the sub-0.1 mm pixel spacings of this
+  # dataset, so the length is fixed in pixels instead. At the median 0.240 mm
+  # per canvas pixel these correspond to extents of 0.72, 1.20, 1.68, 2.64,
+  # 3.60 and 5.04 mm in the patient plane.
   motion_blur:
-    - {severity: 1, length_mm: 0.26, length_px_fallback:  3, angle: 0.0}
-    - {severity: 2, length_mm: 0.43, length_px_fallback:  5, angle: 0.0}
-    - {severity: 3, length_mm: 0.60, length_px_fallback:  7, angle: 0.0}
-    - {severity: 4, length_mm: 0.77, length_px_fallback:  9, angle: 0.0}
-    - {severity: 5, length_mm: 0.94, length_px_fallback: 11, angle: 0.0}
-    - {severity: 6, length_mm: 1.45, length_px_fallback: 17, angle: 0.0}
+    - {severity: 1, length_px:  3, angle: 0.0}
+    - {severity: 2, length_px:  5, angle: 0.0}
+    - {severity: 3, length_px:  7, angle: 0.0}
+    - {severity: 4, length_px: 11, angle: 0.0}
+    - {severity: 5, length_px: 15, angle: 0.0}
+    - {severity: 6, length_px: 21, angle: 0.0}
 
   # Linear contrast reduction centered on masked tissue median.
   # x_out = alpha * (x_in - center) + center
@@ -67,12 +66,12 @@ degradations:
     - {severity: 5, compression_ratio: 250}
     - {severity: 6, compression_ratio: 500}
 
-  # Spatial resolution loss via downscale (INTER_AREA) + upscale (INTER_LINEAR).
+  # Spatial resolution loss via downscale (INTER_AREA) + upscale (INTER_CUBIC).
   # scale_factor = downscale fraction; lower = stronger blurring.
   resolution:
     - {severity: 1, scale_factor: 0.90}
-    - {severity: 2, scale_factor: 0.75}
-    - {severity: 3, scale_factor: 0.60}
-    - {severity: 4, scale_factor: 0.50}
-    - {severity: 5, scale_factor: 0.40}
-    - {severity: 6, scale_factor: 0.33}
+    - {severity: 2, scale_factor: 0.80}
+    - {severity: 3, scale_factor: 0.70}
+    - {severity: 4, scale_factor: 0.60}
+    - {severity: 5, scale_factor: 0.50}
+    - {severity: 6, scale_factor: 0.40}

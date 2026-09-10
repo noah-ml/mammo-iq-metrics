@@ -6,16 +6,25 @@ Quantitative analysis of how image quality degradation affects deep learning mod
 > In cooperation with the Physikalisch-Technische Bundesanstalt (PTB)
 
 ## Overview
-The repository is designed as a reproducible research pipeline for image-quality metric analysis in mammography.
+A reproducible pipeline for image quality metric analysis in mammography, used to quantify how
+defined image quality dimensions affect the discrimination, calibration and threshold behaviour of
+deep learning classifiers.
 
-This pipeline systematically quantifies how defined image quality dimensions affect the performance (AUC), calibration, and sensitivity of deep learning models for mammography. The approach:
+Per image:
 
-1. Load full-resolution DICOM mammograms from VinDr-Mammo
+1. Load the full-resolution DICOM from VinDr-Mammo
 2. Compute a breast mask and crop to the breast region
-3. Fix ROIs (homogeneous tissue patch, lesion ring) on the **original** image
-4. Apply parametrized degradations to the normalized image
-5. Compute image quality metrics on degraded variants using the **same fixed ROIs**
-6. Feed degraded images + IQM values into model training/inference to produce performance-degradation curves
+3. Fix the normalisation window and the ROIs (homogeneous tissue patch, lesion box, background
+   annulus) on the **original** image
+4. Apply the parametrised degradations to the normalised image
+5. Compute the image quality metrics on every variant using the **same fixed ROIs**
+
+Step 3 is the design point that makes the comparison fair: regions are determined once on the
+undegraded image and reused unchanged for all 31 variants, so a metric change reflects the
+degradation and not ROI drift.
+
+**Scope of this repository.** It contains the image quality metric and degradation toolkit. The
+degradation parameters below are the ones used for the thesis experiments.
 
 ## Degradations
 
@@ -34,19 +43,31 @@ Simulates reduced X-ray dose. `dose_factor` is the fraction of original dose; no
 | 6 | 0.35 |
 
 ### Motion blur
-Horizontal rectangular PSF simulating patient/detector motion during exposure. Length is specified in mm and converted to pixels via `PixelSpacing` from the DICOM header. Values are chosen so each severity level maps to a **distinct odd kernel size** at the VinDr-Mammo pixel spacing of 0.085 mm/px.
+Uniform horizontal line PSF simulating patient or paddle motion during exposure, anchored on its
+centre pixel, so it is symmetric and preserves the lesion centroid.
 
-| Severity | `length_mm` | `kernel_px` (at 0.085 mm/px) | `length_px` (fallback) |
-|---|---|---|---|
-| 1 | 0.26 | 3 | 3 |
-| 2 | 0.43 | 5 | 5 |
-| 3 | 0.60 | 7 | 7 |
-| 4 | 0.77 | 9 | 9 |
-| 5 | 0.94 | 11 | 11 |
-| 6 | 1.45 | 17 | 17 |
+The kernel length is specified **directly in pixels**. An earlier mm-first schedule, converted via
+`PixelSpacing` with nearest-odd rounding, was abandoned: at the sub-0.1 mm pixel spacings of this
+dataset the milder nominal lengths all collapse onto a 3 px kernel and produce identical images.
+Fixing the length in pixels guarantees that every severity level is distinct and monotonic.
+
+Kernels apply to the 1024x384 working canvas. One canvas pixel spans a median of 0.240 mm
+(IQR 0.213 to 0.281) across the 20,000 images, about 2.8 times the 0.085 mm detector pitch, so the
+extents below are median values in the patient plane rather than exact per-image lengths.
+
+| Severity | `length_px` | median extent (mm) |
+|---|---|---|
+| 1 | 3 | 0.72 |
+| 2 | 5 | 1.20 |
+| 3 | 7 | 1.68 |
+| 4 | 11 | 2.64 |
+| 5 | 15 | 3.60 |
+| 6 | 21 | 5.04 |
 
 ### Contrast compression
-Linear contrast reduction centered on the masked tissue median: `x_out = α·(x_in − center) + center`.
+Linear contrast compression about the breast-masked median:
+`x_out = α·(x_in − c_B) + c_B`, with `c_B` the median over the breast mask. Applied inside the
+mask only.
 
 | Severity | `alpha` |
 |---|---|
@@ -70,35 +91,44 @@ Lossy wavelet compression at increasing compression ratios. CR=10 is clinically 
 | 6 | 500 |
 
 ### Spatial resolution loss
-Downscale with `INTER_AREA` then upscale back to original size with `INTER_LINEAR`, simulating reduced detector resolution or pixel binning.
+Downscale with `INTER_AREA` (area averaging, which avoids aliasing) then upscale back to the
+original size with `INTER_CUBIC`, simulating reduced detector resolution or pixel binning.
 
 | Severity | `scale_factor` |
 |---|---|
 | 1 | 0.90 |
-| 2 | 0.75 |
-| 3 | 0.60 |
-| 4 | 0.50 |
-| 5 | 0.40 |
-| 6 | 0.33 |
+| 2 | 0.80 |
+| 3 | 0.70 |
+| 4 | 0.60 |
+| 5 | 0.50 |
+| 6 | 0.40 |
 
 Each batch run produces **31 variants per image**: 1 baseline + 6 noise + 6 motion blur + 6 contrast + 6 JPEG 2000 + 6 resolution.
 
 ## Metrics
 
-**All images:**
-| Metric | Description |
-|---|---|
-| `noise_variance` | Variance of a fixed homogeneous tissue patch |
-| `tenengrad` | Mean squared Sobel gradient over breast mask (sharpness) |
-| `ssim` | Full-reference SSIM vs. original, masked to breast region |
+Computed by this toolkit:
 
-**Lesion images only** (requires bounding box annotation):
-| Metric | Description |
-|---|---|
-| `cnr` | \|lesion\_mean − bg\_mean\| / bg\_std (background ring) |
-| `delta_mu` | \|lesion\_mean − bg\_mean\| (absolute contrast) |
+| Metric | Quality dimension | Reference | Scope |
+|---|---|---|---|
+| `noise_variance` | Noise | No-reference | Homogeneous tissue patch (96x96) |
+| `tenengrad` | Sharpness | No-reference | Breast mask |
+| `ssim` | Structural integrity | Full-reference | Breast mask |
+| `cnr` | Contrast discriminability | No-reference | Lesion vs. background annulus |
+| `delta_mu` | Local contrast | No-reference | Lesion vs. background annulus |
 
-ROIs are always determined on the **original image** and reused for all degraded variants to ensure fair comparison.
+`cnr` and `delta_mu` require a finding bounding box and are therefore computed only for annotated
+images. `cnr` is `|lesion_mean - bg_mean| / bg_std`; `delta_mu` is `|lesion_mean - bg_mean|`. The
+pair is reported together because they share a numerator but differ in denominator, which separates
+contrast attenuation (moves `delta_mu`) from raised background noise (moves `cnr` through
+`bg_std`). `cnr` is invariant under a global linear contrast scaling, by construction.
+
+The thesis reports **seven** metrics: these five plus the nonparametric noise measure tau and the
+robust global contrast (interquartile range over the breast mask), both computed in the evaluation
+pipeline rather than in this toolkit.
+
+ROIs are always determined on the **original image** and reused for every degraded variant, so
+metric changes are attributable to the degradation.
 
 ## Project Structure
 
@@ -211,6 +241,14 @@ Each batch run produces:
 ## Tech Stack
 
 Python · pydicom · OpenCV · scikit-image · NumPy · SciPy · Pillow · matplotlib
+
+## Citation
+
+If you use this code, please cite both the software and the thesis (see `CITATION.cff`):
+
+> Lorch, N. (2026). *Quantitative Assessment of Image Quality Degradation and Its Impact on the
+> Robustness of a Deep Learning Classifier in Mammography*. Master's thesis, Technische
+> Universitaet Berlin, in cooperation with the Physikalisch-Technische Bundesanstalt (PTB).
 
 ## License
 
