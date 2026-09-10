@@ -6,7 +6,11 @@ matplotlib>=3.7
 opencv-python>=4.7
 pydicom>=2.4
 pandas>=2.0
+scikit-learn>=1.3        # metrics and the Platt recalibration
+tqdm>=4.65
 pytest>=7.0
+
+# The exact versions used for the reported runs are in requirements-lock.txt.
 
 # Optional — needed for JPEG 2000 degradation (exact CR control)
 # glymur>=0.12        # falls back to Pillow if not installed
