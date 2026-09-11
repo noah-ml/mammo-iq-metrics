@@ -3,9 +3,7 @@
 
 Origin
 ------
-While fixing the lesion-severity claim raised in examiner review (2026-08-20),
-the contrast
-sweep was checked against its analytic prediction: under
+The contrast sweep was checked against its analytic prediction: under
 I' = c_B + alpha (I - c_B) applied to in-mask pixels, both ROI means shift the
 same way, so delta_mu should scale exactly by alpha and the CNR should be
 exactly invariant. It does for most images but not all.
@@ -23,7 +21,7 @@ in-mask fraction f and out-of-mask value v,
 so delta_mu'(alpha) is AFFINE in alpha with an intercept that vanishes iff
 f = 1. That is testable from the results CSV alone, with no image loading.
 
-Result (2026-08-20): 23 of 192 lesions deviate. For the 169 conforming ones the
+Result: 23 of 192 lesions deviate. For the 169 conforming ones the
 fitted slope equals the clean delta_mu to 5e-6 and the intercept is ~1e-5
 relative; the 23 have a large intercept (median 0.76 relative). The deviating
 boxes are much larger (median 203 x 237 px against 85 x 88 px on the

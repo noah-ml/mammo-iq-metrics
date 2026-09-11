@@ -103,9 +103,9 @@ layout. Figure 2.1 is a raster from the IAEA and has no generating script.
 | Training, all three architectures | `experiments/training/mammo-18-v3.py` |
 | Job scripts as submitted | `experiments/slurm/*.slurm` |
 
-`experiments/review_analyses/` holds four scripts written to answer specific examiner questions: an
-alternative performance measure, lesion-level pooled correlations, a check that the lesion ROI
-stays valid under motion blur, and the physical anchoring of the severity ladders.
+`experiments/supplementary/` holds four supporting analyses: an alternative performance measure,
+lesion-level pooled correlations, a check that the lesion ROI stays valid under motion blur, and
+the physical anchoring of the severity ladders.
 
 ### Degradation parameters
 
