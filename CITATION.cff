@@ -4,7 +4,7 @@ title: "mammo-iq-metrics: image quality metrics and parametrised degradations fo
 abstract: >-
   A reproducible pipeline for computing image quality metrics on full-field digital mammograms
   and for applying parametrised image quality degradations (dose-motivated noise, directional
-  motion blur, contrast compression, JPEG 2000 compression and spatial resolution reduction) at
+  motion blur, linear contrast reduction, lossy JPEG 2000 compression and resolution reduction) at
   six severity levels each. Regions of interest and the intensity normalisation window are fixed
   on the undegraded image and reused for every degraded variant, so that metric changes are
   attributable to the degradation.

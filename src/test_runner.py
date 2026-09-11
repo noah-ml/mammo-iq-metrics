@@ -247,7 +247,7 @@ def process_one_image(
     )
 
     # Baseline noise std estimated from the original tissue patch in [0,1] space.
-    # Used as the reference for dose-based noise scaling: a physically lower
+    # Used as the reference for dose-motivated noise scaling: a physically lower
     # dose is simulated by adding noise on top of this baseline level.
     baseline_noise_std = float(np.std(patch_res.patch))
 
