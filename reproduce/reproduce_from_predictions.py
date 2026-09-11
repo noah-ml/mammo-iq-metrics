@@ -14,9 +14,10 @@ Usage
         --val-predictions data/val_clean_predictions.csv \\
         --out-dir        results/reproduced
 
-The released tables have the VinDr-derived columns removed, because those are
-dataset annotations and cannot be redistributed. Run ``join_labels.py`` first to
-reattach them from your own credentialed copy of VinDr-Mammo.
+The released tables ship with their label columns (``label_45``, ``label_5``,
+``density``, ``manufacturer``), so no join is needed. For a table those columns
+have been stripped from, ``join_labels.py`` reattaches them from your own
+credentialed copy of VinDr-Mammo.
 
 With ``--check`` (the default) each reproduced quantity is compared against the
 value reported in the thesis and the script exits non-zero if any of them drift
