@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software and the thesis it belongs to."
+title: "mammo-iq-metrics: image quality metrics and parametrised degradations for mammography"
+abstract: >-
+  A reproducible pipeline for computing image quality metrics on full-field digital mammograms
+  and for applying parametrised image quality degradations (dose-motivated noise, directional
+  motion blur, contrast compression, JPEG 2000 compression and spatial resolution reduction) at
+  six severity levels each. Regions of interest and the intensity normalisation window are fixed
+  on the undegraded image and reused for every degraded variant, so that metric changes are
+  attributable to the degradation.
+type: software
+authors:
+  - family-names: Lorch
+    given-names: Noah
+    affiliation: "Technische Universität Berlin"
+repository-code: "https://github.com/noah-ml/mammo-iq-metrics"
+license: MIT
+keywords:
+  - mammography
+  - image quality
+  - robustness
+  - deep learning
+  - VinDr-Mammo
+preferred-citation:
+  type: thesis
+  title: >-
+    Quantitative Assessment of Image Quality Degradation and Its Impact on the Robustness of a
+    Deep Learning Classifier in Mammography
+  authors:
+    - family-names: Lorch
+      given-names: Noah
+      affiliation: "Technische Universität Berlin"
+  thesis-type: "Master's thesis"
+  institution:
+    name: "Technische Universität Berlin"
+  year: 2026
