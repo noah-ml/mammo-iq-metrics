@@ -15,6 +15,16 @@ authors:
     affiliation: "Technische Universität Berlin"
 repository-code: "https://github.com/noah-ml/mammo-iq-metrics"
 license: MIT
+references:
+  - type: data
+    title: >-
+      Model weights and per-image predictions for: Quantitative Assessment of Image Quality
+      Degradation and Its Impact on the Robustness of a Deep Learning Classifier in Mammography
+    authors:
+      - family-names: Lorch
+        given-names: Noah
+    year: 2026
+    doi: 10.5281/zenodo.22704688
 keywords:
   - mammography
   - image quality
