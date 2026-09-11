@@ -15,6 +15,10 @@ authors:
     affiliation: "Technische Universität Berlin"
 repository-code: "https://github.com/noah-ml/mammo-iq-metrics"
 license: MIT
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22704988
+    description: Concept DOI, resolves to the latest version of the software
 references:
   - type: data
     title: >-
