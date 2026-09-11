@@ -23,7 +23,7 @@ noise        Dose-reduction-equivalent additive Gaussian noise. Severity is
 motion_blur  Directional linear PSF (horizontal by default). Physically
              parameterised in mm when PixelSpacing is available from the DICOM
              header; falls back to pixel-based otherwise.
-contrast     Linear contrast compression around the breast-region median.
+contrast     Linear contrast reduction around the breast-region median.
              Conservative alpha values (0.95–0.70) keep degradation realistic.
 
 Metrics computed by compute_fixed_roi_metrics
@@ -651,13 +651,13 @@ SEVERITY_PRESETS: dict[str, list] = {
     # Dose reduction factors relative to the original acquisition (1.0 = full dose).
     # Quantum noise variance scales as 1/dose, so lower values → more noise.
     "dose_factors":            [0.95, 0.85, 0.75, 0.65, 0.50, 0.35],
-    # Linear contrast compression factors (1.0 = no change, 0.0 = flat image).
+    # Linear contrast reduction factors (1.0 = no change, 0.0 = flat image).
     # Conservative range: mildest degradation first.
     "contrast_alpha":          [0.95, 0.90, 0.85, 0.80, 0.75, 0.70],
     # JPEG 2000 compression ratios (higher = more lossy).
     # CR=10 is clinically acceptable; CR=500 causes severe detail loss.
     "jpeg2000_compression_ratios": [10, 25, 50, 100, 250, 500],
-    # Spatial resolution downscale factors (1.0 = original; lower = more degraded).
+    # Resolution reduction downscale factors (1.0 = original; lower = more degraded).
     # Each level downscales by this factor (INTER_AREA, area averaging) then
     # upscales back to the original size (INTER_CUBIC, bicubic), discarding
     # high-frequency detail while preserving overall geometry.
@@ -839,7 +839,7 @@ def apply_motion_blur(
     return clip01(blurred), kernel
 
 
-# --- Dose-based noise --------------------------------------------------------
+# --- Dose-motivated noise ----------------------------------------------------
 
 def apply_dose_based_noise(
     image: ArrayLike,
@@ -921,7 +921,7 @@ def apply_contrast_reduction(
     mask: ArrayLike | None = None,
     center_mode: str = "masked_median",
 ) -> np.ndarray:
-    """Apply linear contrast compression around a reference breast intensity.
+    """Apply linear contrast reduction around a reference breast intensity.
 
     Formula:
 
@@ -1072,13 +1072,13 @@ def apply_jpeg2000_degradation(
     return clip01(result.astype(np.float32))
 
 
-# --- Spatial resolution loss -------------------------------------------------
+# --- Resolution reduction ----------------------------------------------------
 
 def apply_resolution_degradation(
     image: ArrayLike,
     scale_factor: float,
 ) -> np.ndarray:
-    """Simulate spatial resolution loss by downscaling then upscaling.
+    """Simulate resolution reduction by downscaling then upscaling.
 
     Downscales the image by ``scale_factor`` using INTER_AREA (area-averaging,
     anti-aliased), then upscales back to the original size with INTER_CUBIC.
@@ -1091,7 +1091,7 @@ def apply_resolution_degradation(
         Normalised mammogram in [0, 1].
     scale_factor : float
         Downscale factor in (0, 1]. 1.0 = no change; smaller values produce
-        stronger resolution loss (e.g. 0.5 halves the linear resolution before
+        stronger resolution reduction (e.g. 0.5 halves the linear resolution before
         upsampling back).
 
     Returns

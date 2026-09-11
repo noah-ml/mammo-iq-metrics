@@ -21,7 +21,7 @@ degradation types (dose noise, horizontal motion blur, contrast reduction, JPEG2
 resolution reduction). Intensity windowing is identical across all panels ([0,1]). The SSIM of
 each degraded image relative to its clean version is annotated beneath each panel. The figure
 illustrates what each severity level means perceptually: dose noise and JPEG2000 produce the
-largest pixel-level changes (lowest SSIM), motion blur and resolution loss visibly smear
+largest pixel-level changes (lowest SSIM), motion blur and resolution reduction visibly smear
 structure, while contrast reduction is perceptually mild (SSIM stays high) — consistent with its
 near-flat effect on model performance. Illustrative single case; not a quantitative result.
 """,

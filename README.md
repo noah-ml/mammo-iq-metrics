@@ -64,7 +64,7 @@ restores them for any table that lacks them, from your own copy of
 
 All five degradation types use physically calibrated parameters with 6 severity levels each.
 
-### Dose-based noise
+### Dose-motivated noise
 Simulates reduced X-ray dose. `dose_factor` is the fraction of original dose; noise is added to match the expected increase in quantum noise variance (∝ 1/dose).
 
 | Severity | `dose_factor` |
@@ -76,7 +76,7 @@ Simulates reduced X-ray dose. `dose_factor` is the fraction of original dose; no
 | 5 | 0.50 |
 | 6 | 0.35 |
 
-### Motion blur
+### Directional motion blur
 Uniform horizontal line PSF simulating patient or paddle motion during exposure, anchored on its
 centre pixel, so it is symmetric and preserves the lesion centroid.
 
@@ -98,8 +98,8 @@ extents below are median values in the patient plane rather than exact per-image
 | 5 | 15 | 3.60 |
 | 6 | 21 | 5.04 |
 
-### Contrast compression
-Linear contrast compression about the breast-masked median:
+### Linear contrast reduction
+Linear contrast reduction about the breast-masked median:
 `x_out = α·(x_in − c_B) + c_B`, with `c_B` the median over the breast mask. Applied inside the
 mask only.
 
@@ -112,7 +112,7 @@ mask only.
 | 5 | 0.75 |
 | 6 | 0.70 |
 
-### JPEG 2000 compression
+### Lossy JPEG 2000 compression
 Lossy wavelet compression at increasing compression ratios. CR=10 is clinically acceptable; CR=500 causes severe detail loss.
 
 | Severity | `compression_ratio` |
@@ -124,7 +124,7 @@ Lossy wavelet compression at increasing compression ratios. CR=10 is clinically 
 | 5 | 250 |
 | 6 | 500 |
 
-### Spatial resolution loss
+### Resolution reduction
 Downscale with `INTER_AREA` (area averaging, which avoids aliasing) then upscale back to the
 original size with `INTER_CUBIC`, simulating reduced detector resolution or pixel binning.
 

@@ -20,7 +20,7 @@ pipeline:
 # All severity levels (1–6) mirror SEVERITY_PRESETS in src/roi_metrics.py.
 # Severity 0 = baseline (no degradation).
 degradations:
-  # Dose-based Gaussian noise.
+  # Dose-motivated Gaussian noise.
   # dose_factor = fraction of original dose; lower → more noise.
   # additional_std = sqrt(max(target_std² - baseline_std², 0))
   # where target_std = baseline_std / sqrt(dose_factor).
@@ -32,7 +32,8 @@ degradations:
     - {severity: 5, dose_factor: 0.50}
     - {severity: 6, dose_factor: 0.35}
 
-  # Horizontal motion blur, given directly as odd kernel lengths in pixels.
+  # Directional motion blur (horizontal, θ=0°), given directly as odd kernel
+  # lengths in pixels.
   # A mm-first schedule collapses at the sub-0.1 mm pixel spacings of this
   # dataset, so the length is fixed in pixels instead. At the median 0.240 mm
   # per canvas pixel these correspond to extents of 0.72, 1.20, 1.68, 2.64,
@@ -66,7 +67,7 @@ degradations:
     - {severity: 5, compression_ratio: 250}
     - {severity: 6, compression_ratio: 500}
 
-  # Spatial resolution loss via downscale (INTER_AREA) + upscale (INTER_CUBIC).
+  # Resolution reduction via downscale (INTER_AREA) + upscale (INTER_CUBIC).
   # scale_factor = downscale fraction; lower = stronger blurring.
   resolution:
     - {severity: 1, scale_factor: 0.90}

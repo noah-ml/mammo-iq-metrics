@@ -9,11 +9,11 @@ in [0, 1] and returns a float32 array of the same shape, clipped to [0, 1].
 
 Functions
 ---------
-dose_noise          – Poisson-motivated additive Gaussian noise (eq 4.7–4.9)
-motion_blur         – Horizontal (θ=0°) motion blur (eq 4.11)
-contrast_reduction  – Breast-masked mean-centering contrast compression (eq 4.12–4.13)
-jpeg2000            – JPEG2000 lossy encode-decode at given compression ratio (eq 4.14–4.15)
-resolution_reduction– INTER_AREA downscale + INTER_CUBIC upsample (eq 4.16)
+dose_noise          – Dose-motivated additive Gaussian noise (eq 4.7–4.9)
+motion_blur         – Directional motion blur, horizontal θ=0° (eq 4.11)
+contrast_reduction  – Linear contrast reduction about the breast-masked mean (eq 4.12–4.13)
+jpeg2000            – Lossy JPEG 2000 encode-decode at given compression ratio (eq 4.14–4.15)
+resolution_reduction– Resolution reduction, INTER_AREA down + INTER_CUBIC up (eq 4.16)
 
 Helpers
 -------
@@ -301,7 +301,8 @@ def motion_blur(
     severity: int,
     pixel_spacing_mm: float = 0.07,
 ) -> np.ndarray:
-    """Horizontal (θ=0°) motion blur with explicit pixel-unit kernel lengths (eq 4.11).
+    """Directional motion blur, horizontal θ=0°, with explicit pixel-unit kernel
+    lengths (eq 4.11).
 
     Parameters
     ----------
@@ -344,7 +345,7 @@ def contrast_reduction(
     severity: int,
     mask: np.ndarray,
 ) -> np.ndarray:
-    """Breast-masked mean-centering contrast compression (eq 4.12–4.13).
+    """Linear contrast reduction about the breast-masked mean (eq 4.12–4.13).
 
     Parameters
     ----------
