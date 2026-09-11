@@ -5,6 +5,8 @@ Quantitative analysis of how image quality degradation affects deep learning mod
 > **MSc Thesis** · Biomedical Engineering, TU Berlin (2026)  
 > In cooperation with the Physikalisch-Technische Bundesanstalt (PTB)
 
+[![Data record](https://zenodo.org/badge/DOI/10.5281/zenodo.22704688.svg)](https://doi.org/10.5281/zenodo.22704688)
+
 ## Overview
 A reproducible pipeline for image quality metric analysis in mammography, used to quantify how
 defined image quality dimensions affect the discrimination, calibration and threshold behaviour of
@@ -29,6 +31,11 @@ reproduction path that regenerates the results without a GPU. Model weights and 
 predictions are in the accompanying data record, since they are too large for git.
 
 ## Reproducing the results
+
+Model weights and per-image predictions live in the companion data record, archived on
+Zenodo: **<https://doi.org/10.5281/zenodo.22704688>** (nine models, three architectures x three seeds,
+and nine prediction tables of 124,000 rows each). That DOI always resolves to the latest
+version of the record.
 
 The released prediction tables carry one row per image x degradation x severity, with the model
 logit and the image quality metrics for that variant. Every quantitative claim in the results
@@ -285,6 +292,10 @@ Python · pydicom · OpenCV · scikit-image · NumPy · SciPy · Pillow · matpl
 ## Citation
 
 If you use this code, please cite both the software and the thesis (see `CITATION.cff`):
+
+> Lorch, N. (2026). *Model weights and per-image predictions for: Quantitative Assessment of
+> Image Quality Degradation and Its Impact on the Robustness of a Deep Learning Classifier in
+> Mammography* [Data set]. Zenodo. <https://doi.org/10.5281/zenodo.22704688>
 
 > Lorch, N. (2026). *Quantitative Assessment of Image Quality Degradation and Its Impact on the
 > Robustness of a Deep Learning Classifier in Mammography*. Master's thesis, Technische
