@@ -3,8 +3,7 @@
 
 Background
 ----------
-The second examiner (Panknin, annotation batch 3, 2026-08-20) asked why the
-lesion-level analysis excluded four of the five degradations at the milder
+Examiner review (2026-08-20) asked why the lesion-level analysis excluded four of the five degradations at the milder
 severities. Checking the data showed the premise of the thesis sentence was
 wrong: cnr and delta_mu are present for all 357 annotated images in all 30
 degraded conditions, in every results CSV, because `evaluate_degradations.py`
@@ -19,8 +18,8 @@ from the released data.
 
 Output
 ------
-  panknin_lesion_pooled_20260820/lesion_correlations.csv
-  panknin_lesion_pooled_20260820/lesion_report.txt
+  lesion_pooled/lesion_correlations.csv
+  lesion_pooled/lesion_report.txt
 """
 from __future__ import annotations
 
@@ -36,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from paths import DATA_DIR, OUT_DIR, PRIMARY_RESULTS_CSV, require  # noqa: E402
 
 RESULTS_CSV = PRIMARY_RESULTS_CSV
-OUTDIR = OUT_DIR / "panknin_lesion_pooled"
+OUTDIR = OUT_DIR / "lesion_pooled"
 
 DEGS = ["noise", "blur", "contrast", "jpeg2000", "resolution"]
 LABEL = {"noise": "Dose-motivated noise", "blur": "Motion blur",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Physical anchoring of the severity levels (Panknin batch 3, P3-04/P3-15).
+"""Physical anchoring of the severity levels (examiner review, 2026-08-20).
 
 Two of the anchors in the thesis are stated against the NATIVE detector pitch
 (0.085 mm/px) although the operators act on the 1024 x 384 working canvas. The
@@ -14,7 +14,7 @@ Inputs (both local):
   iqm_full_dataset/iqms.csv           crop_height / crop_width per image
 
 Output:
-  panknin_severity_anchors_20260820/severity_anchors.txt
+  severity_anchors/severity_anchors.txt
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from paths import DATA_DIR, OUT_DIR, PRIMARY_RESULTS_CSV, require  # noqa: E402
 
-OUTDIR = OUT_DIR / "panknin_severity_anchors"
+OUTDIR = OUT_DIR / "severity_anchors"
 CANVAS_H = 1024
 CANVAS_W = 384
 

@@ -3,28 +3,28 @@
 
 Background
 ----------
-The second examiner (Panknin, annotation batch 3, 2026-08-20) asked repeatedly
-why RQ2 correlates the image quality metrics with the per-image *prediction
-shift* |dl| = |logit_deg - logit_clean| rather than with a quantity that says
-whether the prediction got *worse*. He proposed
+Examiner review (2026-08-20) asked repeatedly why RQ2 correlates the image
+quality metrics with the per-image *prediction shift*
+|dl| = |logit_deg - logit_clean| rather than with a quantity that says whether
+the prediction got *worse*. The measure proposed was
 
     d_acc_i = |y_i - p_clean,i| - |y_i - p_deg,i|      (>0: degraded is closer to y)
 
-This script recomputes the whole RQ2 correlation matrix with his measure in
+This script recomputes the whole RQ2 correlation matrix with that measure in
 place of |dl| and reports how much the answer changes. It uses the same
 per-image results CSV as every published figure (ConvNeXt-Tiny no-ColorJitter,
 training job 956694 / degradation eval 957382), so no model inference is
 repeated.
 
 Convention used here: err_shift = |y - p_deg| - |y - p_clean|, i.e. the sign is
-flipped relative to his formula so that POSITIVE means the prediction moved
+flipped relative to the proposed formula so that POSITIVE means the prediction moved
 AWAY from the label (worse). The unsigned |err_shift| is the like-for-like
 counterpart of |dl|, which is itself unsigned.
 
 Outputs
 -------
-  panknin_alt_measure_20260820/alt_measure_correlations.csv
-  panknin_alt_measure_20260820/alt_measure_report.txt
+  alt_measure/alt_measure_correlations.csv
+  alt_measure/alt_measure_report.txt
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from paths import DATA_DIR, OUT_DIR, PRIMARY_RESULTS_CSV, require  # noqa: E402
 
 RESULTS_CSV = PRIMARY_RESULTS_CSV
-OUTDIR = OUT_DIR / "panknin_alt_measure"
+OUTDIR = OUT_DIR / "alt_measure"
 
 IQMS = ["ssim", "tenengrad", "noise_var", "tau", "contrast_iqr"]
 IQM_LABEL = {"ssim": "SSIM", "tenengrad": "Tenengrad", "noise_var": "Noise var.",
