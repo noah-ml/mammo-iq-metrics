@@ -53,7 +53,7 @@ def fig7():
 
 def fig8():
     # Panel A carries two families of curves: the uncalibrated ECE and the ECE
-    # after the clean-validation Platt fit (examiner review, 2026-08-20). They differ
+    # after the clean-validation Platt fit. They differ
     # by more than an order of magnitude (0.34-0.75 raw against 0.008-0.144
     # after Platt), so panel A uses a log ordinate: on a linear axis the
     # recalibrated family collapses onto the baseline and its ordering, which is

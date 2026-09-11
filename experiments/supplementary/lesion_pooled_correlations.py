@@ -3,11 +3,11 @@
 
 Background
 ----------
-Examiner review (2026-08-20) asked why the lesion-level analysis excluded four of the five degradations at the milder
-severities. Checking the data showed the premise of the thesis sentence was
-wrong: cnr and delta_mu are present for all 357 annotated images in all 30
-degraded conditions, in every results CSV, because `evaluate_degradations.py`
-computes them per variant from ROIs fixed once on the clean image
+An earlier draft implied that the lesion-level analysis covered the milder
+severities for only one of the five degradations. The data say otherwise:
+cnr and delta_mu are present for all 357 annotated images in all 30 degraded
+conditions, in every results CSV, because `evaluate_degradations.py` computes
+them per variant from ROIs fixed once on the clean image
 (`build_lesion_roi_lookup.py`), which makes the lookup severity-independent by
 construction.
 
