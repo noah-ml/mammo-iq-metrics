@@ -5,6 +5,7 @@ Quantitative analysis of how image quality degradation affects deep learning mod
 > **MSc Thesis** · Biomedical Engineering, TU Berlin (2026)  
 > In cooperation with the Physikalisch-Technische Bundesanstalt (PTB)
 
+[![Software](https://zenodo.org/badge/DOI/10.5281/zenodo.22704988.svg)](https://doi.org/10.5281/zenodo.22704988)
 [![Data record](https://zenodo.org/badge/DOI/10.5281/zenodo.22704688.svg)](https://doi.org/10.5281/zenodo.22704688)
 
 ## Overview
