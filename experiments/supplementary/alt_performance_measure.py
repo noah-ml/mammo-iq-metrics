@@ -3,10 +3,10 @@
 
 Background
 ----------
-Examiner review (2026-08-20) asked repeatedly why RQ2 correlates the image
-quality metrics with the per-image *prediction shift*
-|dl| = |logit_deg - logit_clean| rather than with a quantity that says whether
-the prediction got *worse*. The measure proposed was
+RQ2 correlates the image quality metrics with the per-image *prediction shift*
+|dl| = |logit_deg - logit_clean|. That quantity measures how far a prediction
+moved, not whether it moved the wrong way. The natural alternative is a
+per-image change in accuracy,
 
     d_acc_i = |y_i - p_clean,i| - |y_i - p_deg,i|      (>0: degraded is closer to y)
 
@@ -17,8 +17,8 @@ training job 956694 / degradation eval 957382), so no model inference is
 repeated.
 
 Convention used here: err_shift = |y - p_deg| - |y - p_clean|, i.e. the sign is
-flipped relative to the proposed formula so that POSITIVE means the prediction moved
-AWAY from the label (worse). The unsigned |err_shift| is the like-for-like
+flipped relative to the formula above, so that POSITIVE means the prediction
+moved AWAY from the label (worse). The unsigned |err_shift| is the like-for-like
 counterpart of |dl|, which is itself unsigned.
 
 Outputs
@@ -108,7 +108,7 @@ def main() -> None:
     add("Spearman rho, IQM vs |delta logit| (as published, Table A.9 / Figure 5.5)")
     add(m_shift.round(3).to_string())
     add("")
-    add("Spearman rho, IQM vs |change in absolute error| (examiner's measure)")
+    add("Spearman rho, IQM vs |change in absolute error| (alternative measure)")
     add(m_acc.round(3).to_string())
     add("")
     add("Spearman rho, IQM vs SIGNED change in absolute error")

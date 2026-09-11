@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Physical anchoring of the severity levels (examiner review, 2026-08-20).
+"""Physical anchoring of the severity levels.
 
 Two of the anchors in the thesis are stated against the NATIVE detector pitch
 (0.085 mm/px) although the operators act on the 1024 x 384 working canvas. The
