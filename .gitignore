@@ -8,3 +8,7 @@ batch_*_results/
 *.dcm
 .DS_Store
 .env
+
+# Released tables and generated output (see docs/THESIS_MAP.md)
+data/
+results/
