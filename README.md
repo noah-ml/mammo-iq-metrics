@@ -172,7 +172,7 @@ metric changes are attributable to the degradation.
 │   ├── paths.py            #   MAMMO_DATA_DIR / MAMMO_OUT_DIR resolution
 │   ├── training/           #   mammo-18-v3.py, all three architectures
 │   ├── slurm/              #   job scripts as submitted
-│   └── panknin/            #   scripts answering specific examiner questions
+│   └── review_analyses/    #   scripts answering specific examiner questions
 ├── reproduce/
 │   ├── reproduce_from_predictions.py   # results chapter, no GPU
 │   └── join_labels.py      #   reattach VinDr columns from your own copy

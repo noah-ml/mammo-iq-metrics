@@ -3,7 +3,8 @@
 
 Origin
 ------
-While fixing the lesion-severity claim (Panknin batch 3, P3-09) the contrast
+While fixing the lesion-severity claim raised in examiner review (2026-08-20),
+the contrast
 sweep was checked against its analytic prediction: under
 I' = c_B + alpha (I - c_B) applied to in-mask pixels, both ROI means shift the
 same way, so delta_mu should scale exactly by alpha and the CNR should be
@@ -32,8 +33,8 @@ unchanged, so nothing reported depends on it.
 
 Output
 ------
-  panknin_lesion_roi_check_20260820/roi_mask_check.csv
-  panknin_lesion_roi_check_20260820/roi_mask_report.txt
+  lesion_roi_check/roi_mask_check.csv
+  lesion_roi_check/roi_mask_report.txt
 """
 from __future__ import annotations
 
@@ -51,7 +52,7 @@ from paths import DATA_DIR, OUT_DIR, PRIMARY_RESULTS_CSV, require  # noqa: E402
 
 RESULTS_CSV = PRIMARY_RESULTS_CSV
 LOOKUP_CSV = DATA_DIR / "lesion_roi_lookup_1024x384.csv"
-OUTDIR = OUT_DIR / "panknin_lesion_roi_check"
+OUTDIR = OUT_DIR / "lesion_roi_check"
 
 ALPHA = {1: 0.95, 2: 0.90, 3: 0.85, 4: 0.80, 5: 0.75, 6: 0.70}
 DEGS = ["noise", "blur", "contrast", "jpeg2000", "resolution"]
