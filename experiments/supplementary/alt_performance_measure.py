@@ -105,7 +105,7 @@ def main() -> None:
     add("Source: %s" % RESULTS_CSV.name)
     add("n per degradation: %s image-severity observations" % ", ".join(map(str, n_per)))
     add("")
-    add("Spearman rho, IQM vs |delta logit| (as published, Table A.9 / Figure 5.5)")
+    add("Spearman rho, IQM vs |delta logit| (as published, Table A.10 / Figure 5.5)")
     add(m_shift.round(3).to_string())
     add("")
     add("Spearman rho, IQM vs |change in absolute error| (alternative measure)")

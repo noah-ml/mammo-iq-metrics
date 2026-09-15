@@ -9,11 +9,11 @@ in [0, 1] and returns a float32 array of the same shape, clipped to [0, 1].
 
 Functions
 ---------
-dose_noise          – Dose-motivated additive Gaussian noise (eq 4.7–4.9)
-motion_blur         – Directional motion blur, horizontal θ=0° (eq 4.11)
-contrast_reduction  – Linear contrast reduction about the breast-masked mean (eq 4.12–4.13)
-jpeg2000            – Lossy JPEG 2000 encode-decode at given compression ratio (eq 4.14–4.15)
-resolution_reduction– Resolution reduction, INTER_AREA down + INTER_CUBIC up (eq 4.16)
+dose_noise          – Dose-motivated additive Gaussian noise (eq A.7, A.8, 4.1)
+motion_blur         – Directional motion blur, horizontal θ=0° (eq 4.2)
+contrast_reduction  – Linear contrast reduction about the breast-masked mean (eq A.10, 4.3)
+jpeg2000            – Lossy JPEG 2000 encode-decode at given compression ratio (eq A.11, 4.4)
+resolution_reduction– Resolution reduction, INTER_AREA down + INTER_CUBIC up (eq 4.5)
 
 Helpers
 -------
@@ -269,7 +269,7 @@ def dose_noise(
     sigma0: float,
     seed: int = 0,
 ) -> np.ndarray:
-    """Additive Gaussian noise motivated by dose reduction (eq 4.7–4.9).
+    """Additive Gaussian noise motivated by dose reduction (eq A.7, A.8, 4.1).
 
     Parameters
     ----------
@@ -281,15 +281,15 @@ def dose_noise(
     """
     dose_factors = [0.95, 0.85, 0.75, 0.65, 0.50, 0.35]
     f_D = dose_factors[severity - 1]
-    sigma_target = sigma0 / math.sqrt(f_D)                         # eq 4.7
-    sigma_add = math.sqrt(max(sigma_target ** 2 - sigma0 ** 2, 0.0))  # eq 4.8
+    sigma_target = sigma0 / math.sqrt(f_D)                         # eq A.7
+    sigma_add = math.sqrt(max(sigma_target ** 2 - sigma0 ** 2, 0.0))  # eq A.8
 
     if sigma_add <= 0.0:
         return np.asarray(img, dtype=np.float32).copy()
 
     rng = np.random.default_rng(seed)
     eta = rng.normal(0.0, sigma_add, size=img.shape).astype(np.float32)
-    return np.clip(np.asarray(img, dtype=np.float32) + eta, 0.0, 1.0)  # eq 4.9
+    return np.clip(np.asarray(img, dtype=np.float32) + eta, 0.0, 1.0)  # eq 4.1
 
 
 # ---------------------------------------------------------------------------
@@ -302,7 +302,7 @@ def motion_blur(
     pixel_spacing_mm: float = 0.07,
 ) -> np.ndarray:
     """Directional motion blur, horizontal θ=0°, with explicit pixel-unit kernel
-    lengths (eq 4.11).
+    lengths (eq 4.2).
 
     Parameters
     ----------
@@ -321,7 +321,7 @@ def motion_blur(
     3 px kernel) — making those severities produce identical predictions.
     Explicit odd kernel lengths guarantee every severity is distinct.
     """
-    kernel_lengths_px = [3, 5, 7, 11, 15, 21]                       # eq 4.11
+    kernel_lengths_px = [3, 5, 7, 11, 15, 21]                       # eq 4.2
     L_px = kernel_lengths_px[severity - 1]
 
     kernel = np.zeros((L_px, L_px), dtype=np.float32)
@@ -345,7 +345,7 @@ def contrast_reduction(
     severity: int,
     mask: np.ndarray,
 ) -> np.ndarray:
-    """Linear contrast reduction about the breast-masked mean (eq 4.12–4.13).
+    """Linear contrast reduction about the breast-masked mean (eq A.10, 4.3).
 
     Parameters
     ----------
@@ -358,9 +358,9 @@ def contrast_reduction(
     m = mask.astype(bool)
     if not np.any(m):
         return np.asarray(img, dtype=np.float32).copy()
-    c_B = float(np.median(img[m]))                                  # eq 4.12
+    c_B = float(np.median(img[m]))                                  # eq A.10
     out = np.asarray(img, dtype=np.float32).copy()
-    out[m] = c_B + alpha * (img[m] - c_B)                          # eq 4.13
+    out[m] = c_B + alpha * (img[m] - c_B)                          # eq 4.3
     return np.clip(out, 0.0, 1.0)
 
 
@@ -369,7 +369,7 @@ def contrast_reduction(
 # ---------------------------------------------------------------------------
 
 def jpeg2000(img: np.ndarray, severity: int) -> np.ndarray:
-    """JPEG2000 lossy encode-decode at compression ratio CR (eq 4.14–4.15).
+    """JPEG2000 lossy encode-decode at compression ratio CR (eq A.11, 4.4).
 
     Requires glymur. Falls back to JPEG via cv2 with a warning if unavailable.
     """
@@ -378,7 +378,7 @@ def jpeg2000(img: np.ndarray, severity: int) -> np.ndarray:
 
     img_u16 = np.round(
         np.clip(np.asarray(img, dtype=np.float32), 0.0, 1.0) * 65535
-    ).astype(np.uint16)                                             # eq 4.14
+    ).astype(np.uint16)                                             # eq A.11
 
     try:
         import glymur  # type: ignore
@@ -392,7 +392,7 @@ def jpeg2000(img: np.ndarray, severity: int) -> np.ndarray:
         finally:
             if os.path.exists(tmp):
                 os.unlink(tmp)
-        return np.clip(decoded.astype(np.float32) / 65535.0, 0.0, 1.0)  # eq 4.15
+        return np.clip(decoded.astype(np.float32) / 65535.0, 0.0, 1.0)  # eq 4.4
 
     except Exception as exc:
         warnings.warn(
@@ -414,7 +414,7 @@ def jpeg2000(img: np.ndarray, severity: int) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def resolution_reduction(img: np.ndarray, severity: int) -> np.ndarray:
-    """INTER_AREA downscale then INTER_CUBIC upsample (eq 4.16).
+    """INTER_AREA downscale then INTER_CUBIC upsample (eq 4.5).
 
     Parameters
     ----------
@@ -428,7 +428,7 @@ def resolution_reduction(img: np.ndarray, severity: int) -> np.ndarray:
     W_small = max(1, int(math.floor(r * W)))
     x = np.asarray(img, dtype=np.float32)
     small = cv2.resize(x, (W_small, H_small), interpolation=cv2.INTER_AREA)
-    out   = cv2.resize(small, (W, H),          interpolation=cv2.INTER_CUBIC)  # eq 4.16
+    out   = cv2.resize(small, (W, H),          interpolation=cv2.INTER_CUBIC)  # eq 4.5
     return np.clip(out, 0.0, 1.0).astype(np.float32)
 
 
