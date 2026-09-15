@@ -37,7 +37,7 @@ thesis, exiting non-zero on any drift:
 | Clean average precision | 0.436 | §5.1 |
 | JPEG 2000 S6 AUC / AP | 0.654 / 0.123 | §5.3 |
 | JPEG 2000 S6 change in AUC | −0.170 | §5.3 |
-| ECE, uncalibrated / Platt | 0.367 / 0.009 | Table 5.7 |
+| ECE, uncalibrated / Platt | 0.367 / 0.009 | Table 5.6 |
 | Mean tau, clean / noise S6 | 0.0036 / 0.0281 | §5.2 |
 | SSIM against prediction shift, JPEG 2000 | −0.821 | §5.4 |
 | the same, within a fixed severity | −0.331 | §5.4 |
@@ -78,7 +78,6 @@ Run these from inside `figures/`. They share `pubcommon.py`, which resolves path
 | A | `FIG_degradation_diff_abs` | `make_degradation_diff.py` | DICOM |
 | A | `FIG_delta_auc_auprc_forest` | `fig3_4_studylevel.py` | predictions |
 | A | `FIG_score_distributions_clean_vs_severe` | `fig7_8_dist_calibration.py` | predictions |
-| A | `FIG_calibration_temperature_scaled` | `fig8b_temperature_scaling.py` | predictions + validation |
 | A | `figure2_display_params_by_manufacturer` | `fig_display_params_manufacturer_pdf.py` | DICOM metadata table |
 | A | `APP_*` panels | `fig5_6_bridge_heatmap.py`, `fig7_8_dist_calibration.py`, `fig3_4_robustness.py` | predictions |
 
@@ -87,7 +86,12 @@ figure scripts read.
 
 Two notes. `fig3_4_studylevel.py` bootstraps study-level confidence intervals and takes about
 ten minutes; `_fig53_iter.py` re-renders it from a cached pickle in seconds while tuning
-layout. Figure 2.1 is a raster from the IAEA and has no generating script.
+layout. Figure 2.1 is a raster from the IAEA and has no generating script, and Figures 5.1
+and A.5 are TikZ diagrams drawn in the thesis source.
+
+`fig8b_temperature_scaling.py` is kept for completeness: it plots the temperature-scaled
+calibration curves, which the thesis reports as numbers (Tables 5.6 and A.7) rather than as a
+figure, so it maps to no figure above.
 
 ---
 
